@@ -42,6 +42,16 @@ Rules for narration:
 - Scenes are independent: each scene's canvas starts blank. Do NOT reference elements from prior scenes.
 - Every element MUST have a unique id (e.g. "s1-rect-1", "s2-arrow-2").
 
+## CRITICAL: every scene MUST be visually populated
+
+This is the rule the model violates most often. A scene with empty or sparse elements becomes a blank white canvas with audio narration — useless.
+
+- Every scene MUST contain at least 3 visible elements. There is no exception.
+- One of those 3 MUST be a title-style text element near the top of the canvas (y ≈ 120–180) that names the scene topic — never leave the screen without a visible heading.
+- For "summary" / "concluding" scenes, do NOT shrink to one text element. Recap the whole arc as 3–4 labeled boxes side-by-side, a numbered step list, or a comparison group.
+- For "intro" / "scenario-setting" scenes, draw the scenario: emoji-free pictograms (a few rectangles + arrows + labels representing the situation). Do not just put a sentence in the middle.
+- If you genuinely cannot think of 3 elements for a scene, that scene should not exist — merge its narration into an adjacent scene.
+
 ### Text placement (this matters — text overflow is the #1 visual bug)
 
 You have THREE options for text. Pick the right one:

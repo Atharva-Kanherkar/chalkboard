@@ -27,7 +27,7 @@ export class OpenAIProvider implements LLMProvider {
       apiKey,
       ...(opts.baseURL ? { baseURL: opts.baseURL } : {}),
     });
-    this.model = opts.model ?? 'gpt-4o-mini';
+    this.model = opts.model ?? process.env['OPENAI_MODEL'] ?? 'gpt-5.5';
     this.structuredMode = opts.structuredMode ?? 'json_object';
   }
 

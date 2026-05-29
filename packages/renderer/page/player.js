@@ -42,6 +42,70 @@
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // -------- empty-scene fallback --------
+
+  const KNOWN_TYPES = new Set([
+    'rectangle',
+    'ellipse',
+    'diamond',
+    'line',
+    'arrow',
+    'text',
+    'code-block',
+    'step-marker',
+    'group',
+    'highlight',
+  ]);
+
+  // Decide whether a scene has at least one visible thing to draw. We accept
+  // any element whose type the renderer knows AND which has some meaningful
+  // content — non-zero size for shapes, non-empty text for text, etc.
+  function hasRenderableContent(elements) {
+    if (!Array.isArray(elements) || elements.length === 0) return false;
+    for (const el of elements) {
+      if (!el || !KNOWN_TYPES.has(el.type)) continue;
+      if (el.type === 'text') {
+        if (String(el.text || '').trim().length > 0) return true;
+        continue;
+      }
+      if (el.type === 'arrow' || el.type === 'line') {
+        // arrows with from/to resolve later; assume valid
+        if (el.from && el.to) return true;
+        if (Array.isArray(el.points) && el.points.length >= 2) return true;
+        if ((el.width || 0) > 1 || (el.height || 0) > 1) return true;
+        continue;
+      }
+      // shapes
+      if ((el.width || 0) > 1 && (el.height || 0) > 1) return true;
+    }
+    return false;
+  }
+
+  // Build a minimal "title card" from a scene's narration so the canvas
+  // never goes blank. Picks the first sentence (or first 90 chars), drawn
+  // centered horizontally near the top.
+  function synthesizeNarrationFallback(scene) {
+    const raw = String(scene && scene.narration ? scene.narration : '').trim();
+    if (!raw) return [];
+    const firstSentence = raw.split(/(?<=[.!?])\s+/)[0] || raw.slice(0, 90);
+    const text = firstSentence.length > 140 ? firstSentence.slice(0, 137) + '…' : firstSentence;
+    const id = (scene && scene.id ? scene.id : 'fallback') + '-fallback-title';
+    return [
+      {
+        id,
+        type: 'text',
+        x: 160,
+        y: 420,
+        text,
+        fontSize: 44,
+        fontFamily: 1,
+        strokeColor: '#1e1e1e',
+        maxWidth: 1600,
+        textAlign: 'center',
+      },
+    ];
+  }
+
   // -------- drawing primitives --------
   function paintBg() {
     ctx.fillStyle = '#fafafa';
@@ -479,11 +543,25 @@
   }
 
   async function playScene(scene, timing) {
-    const elements = Array.isArray(scene.elements) ? scene.elements : [];
+    let elements = Array.isArray(scene.elements) ? scene.elements : [];
+
+    // Defense-in-depth: if the LLM produced a scene with no usable elements,
+    // synthesize a title from the narration so we never leak a fully blank
+    // canvas to the recording. Detection: zero elements, OR every element is
+    // an unknown type / has zero size / lacks the minimum fields we need.
+    if (!hasRenderableContent(elements)) {
+      console.warn(
+        '[chalkboard] scene "%s" has no renderable elements; falling back to narration title',
+        scene.id || '?',
+      );
+      elements = synthesizeNarrationFallback(scene);
+    }
+
     // Clear board.
     paintBg();
 
     if (elements.length === 0) {
+      // Truly empty (no narration even). Hold the empty canvas; logged above.
       await sleep(timing.durationMs);
       return;
     }

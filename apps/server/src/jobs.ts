@@ -16,6 +16,8 @@ export interface Job {
   progress: ProgressEvent[];
   error?: string;
   outputKey?: string;
+  /** Storage key for the persisted SceneScript JSON. */
+  scriptKey?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,11 +56,12 @@ export class JobStore {
     job.updatedAt = new Date().toISOString();
   }
 
-  succeed(id: string, outputKey: string): void {
+  succeed(id: string, outputKey: string, scriptKey?: string): void {
     const job = this.map.get(id);
     if (!job) return;
     job.status = 'done';
     job.outputKey = outputKey;
+    if (scriptKey) job.scriptKey = scriptKey;
     job.updatedAt = new Date().toISOString();
   }
 
@@ -101,6 +104,23 @@ export async function runJob(
     onProgress: (e) => store.pushProgress(job.id, e),
   };
 
-  await generate(opts);
-  store.succeed(job.id, outputKey);
+  const result = await generate(opts);
+
+  // Persist the SceneScript alongside the mp4 so the exact LLM output that
+  // produced a given video is recoverable. Failures here must not fail the
+  // job — the video is already on disk.
+  const scriptKey = `${job.id}.script.json`;
+  try {
+    const scriptPath = await storage.absolutePath(scriptKey);
+    const { writeFile } = await import('node:fs/promises');
+    await writeFile(scriptPath, JSON.stringify(result.script, null, 2), 'utf8');
+  } catch (err) {
+    console.warn(
+      '[chalkboard] failed to persist SceneScript for job %s: %s',
+      job.id,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  store.succeed(job.id, outputKey, scriptKey);
 }

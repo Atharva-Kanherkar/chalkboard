@@ -96,6 +96,21 @@ app.get('/jobs/:id/video', async (c) => {
   });
 });
 
+// Serve the SceneScript JSON that produced this video. Useful for debugging
+// blank-canvas / weird-layout outputs without re-running generation.
+app.get('/jobs/:id/script', async (c) => {
+  const job = jobs.get(c.req.param('id'));
+  if (!job || !job.scriptKey) return c.json({ error: 'not ready' }, 404);
+  const stream = await storage.openReadable(job.scriptKey);
+  if (!stream) return c.json({ error: 'gone' }, 410);
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Content-Disposition': `inline; filename="${job.id}.script.json"`,
+    },
+  });
+});
+
 // Serve the static web UI at /, fallback to the API. Path resolves to
 // apps/web/public from the server's source dir (and post-build dist dir).
 const here = dirname(fileURLToPath(import.meta.url));
@@ -136,6 +151,7 @@ function toJSON(job: Job) {
     progress: job.progress,
     error: job.error ?? null,
     outputUrl: job.outputKey ? `/jobs/${job.id}/video` : null,
+    scriptUrl: job.scriptKey ? `/jobs/${job.id}/script` : null,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   };
