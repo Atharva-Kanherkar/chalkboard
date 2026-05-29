@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { generate } from '@chalkboard/core';
-import type { GenerateOptions, ProgressEvent } from '@chalkboard/shared';
+import type {
+  GenerateOptions,
+  LLMProviderConfig,
+  ProgressEvent,
+  TTSProviderConfig,
+} from '@chalkboard/shared';
 import type { Storage } from './storage.js';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'error';
@@ -71,6 +76,8 @@ export interface RunJobInput {
   language: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
   voice?: string;
+  llm?: LLMProviderConfig;
+  tts?: TTSProviderConfig;
 }
 
 export async function runJob(
@@ -89,6 +96,8 @@ export async function runJob(
     language: input.language,
     aspectRatio: input.aspectRatio,
     ...(input.voice ? { voice: input.voice } : {}),
+    ...(input.llm ? { llm: input.llm } : {}),
+    ...(input.tts ? { tts: input.tts } : {}),
     onProgress: (e) => store.pushProgress(job.id, e),
   };
 

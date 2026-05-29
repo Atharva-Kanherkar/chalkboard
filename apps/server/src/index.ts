@@ -8,6 +8,7 @@
 
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
+import type { LLMProviderConfig, TTSProviderConfig } from '@chalkboard/shared';
 import { JobStore, runJob, type Job } from './jobs.js';
 import { LocalFsStorage } from './storage.js';
 
@@ -36,6 +37,8 @@ app.post('/generate', async (c) => {
       ? body['aspectRatio']
       : '16:9';
   const voice = typeof body['voice'] === 'string' ? body['voice'] : undefined;
+  const llm = parseLLMProvider(body['llm']);
+  const tts = parseTTSProvider(body['tts']);
 
   const job = jobs.create();
   // Fire and forget; the worker updates job state in-place.
@@ -44,12 +47,33 @@ app.post('/generate', async (c) => {
     language,
     aspectRatio,
     ...(voice ? { voice } : {}),
+    ...(llm ? { llm } : {}),
+    ...(tts ? { tts } : {}),
   }).catch((err) => {
     jobs.fail(job.id, err instanceof Error ? err.message : String(err));
   });
 
   return c.json({ jobId: job.id, status: job.status }, 202);
 });
+
+// Provider config pass-through. Server is meant for a private network; if you
+// expose this publicly, validate kinds, deny api-key fields, and add auth.
+const LLM_KINDS = new Set(['anthropic', 'openai', 'ollama', 'stub']);
+const TTS_KINDS = new Set(['piper', 'openai', 'elevenlabs', 'stub']);
+
+function parseLLMProvider(value: unknown): LLMProviderConfig | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj['kind'] !== 'string' || !LLM_KINDS.has(obj['kind'])) return undefined;
+  return obj as unknown as LLMProviderConfig;
+}
+
+function parseTTSProvider(value: unknown): TTSProviderConfig | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj['kind'] !== 'string' || !TTS_KINDS.has(obj['kind'])) return undefined;
+  return obj as unknown as TTSProviderConfig;
+}
 
 app.get('/jobs/:id', (c) => {
   const job = jobs.get(c.req.param('id'));
