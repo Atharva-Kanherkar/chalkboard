@@ -13,9 +13,9 @@ interface CliFlags {
   lang: string;
   aspect: '16:9' | '9:16' | '1:1';
   voice?: string;
-  llm?: 'anthropic' | 'openai' | 'ollama';
+  llm?: 'anthropic' | 'openai' | 'ollama' | 'stub';
   llmModel?: string;
-  tts?: 'piper' | 'openai' | 'elevenlabs';
+  tts?: 'piper' | 'openai' | 'elevenlabs' | 'stub';
   ttsModel?: string;
   ttsVoice?: string;
   workDir?: string;
@@ -37,9 +37,9 @@ program
   .option('-l, --lang <bcp47>', 'Narration language (e.g. en, fr, es)', 'en')
   .option('-a, --aspect <ratio>', 'Aspect ratio: 16:9, 9:16, 1:1', '16:9')
   .option('--voice <id>', 'Voice id (provider-specific)')
-  .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama')
+  .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama | stub')
   .option('--llm-model <id>', 'LLM model id')
-  .option('--tts <kind>', 'TTS provider: piper | openai | elevenlabs')
+  .option('--tts <kind>', 'TTS provider: piper | openai | elevenlabs | stub')
   .option('--tts-model <id>', 'TTS model id')
   .option('--tts-voice <id>', 'TTS voice id')
   .option('--work-dir <path>', 'Working dir (kept around if set)')
@@ -79,6 +79,40 @@ program
     }
   });
 
+program
+  .command('script')
+  .description('Generate just the SceneScript JSON (no render). Useful for prompt iteration.')
+  .argument('<prompt...>', 'The topic to explain.')
+  .option('-l, --lang <bcp47>', 'Narration language', 'en')
+  .option('-a, --aspect <ratio>', 'Aspect ratio', '16:9')
+  .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama | stub')
+  .option('--llm-model <id>', 'LLM model id')
+  .action(async (promptParts: string[], rawFlags) => {
+    const prompt = promptParts.join(' ').trim();
+    if (!prompt) {
+      console.error('chalkboard script: prompt is required');
+      process.exit(2);
+    }
+    const flags = rawFlags as {
+      lang: string;
+      aspect: '16:9' | '9:16' | '1:1';
+      llm?: CliFlags['llm'];
+      llmModel?: string;
+    };
+    const { resolveLLMProvider } = await import('@chalkboard/llm');
+    const provider = resolveLLMProvider(
+      flags.llm
+        ? buildLLMConfig({ ...(flags as unknown as CliFlags), llm: flags.llm })
+        : undefined,
+    );
+    const script = await provider.generateScript({
+      prompt,
+      language: flags.lang,
+      aspectRatio: flags.aspect,
+    });
+    console.log(JSON.stringify(script, null, 2));
+  });
+
 program.parseAsync().catch((err) => {
   console.error(err);
   process.exit(1);
@@ -91,6 +125,9 @@ function buildLLMConfig(flags: CliFlags): LLMProviderConfig {
   }
   if (kind === 'openai') {
     return { kind: 'openai', ...(flags.llmModel ? { model: flags.llmModel } : {}) };
+  }
+  if (kind === 'stub') {
+    return { kind: 'stub' };
   }
   return { kind: 'ollama', ...(flags.llmModel ? { model: flags.llmModel } : {}) };
 }
@@ -105,6 +142,7 @@ function buildTTSConfig(flags: CliFlags): TTSProviderConfig {
       ...(flags.ttsVoice ? { voice: flags.ttsVoice } : {}),
     };
   }
+  if (kind === 'stub') return { kind: 'stub' };
   return { kind: 'elevenlabs', ...(flags.ttsVoice ? { voiceId: flags.ttsVoice } : {}) };
 }
 

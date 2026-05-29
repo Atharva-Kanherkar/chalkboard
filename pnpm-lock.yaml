@@ -29,6 +29,9 @@ importers:
       '@chalkboard/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@chalkboard/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
       '@chalkboard/shared':
         specifier: workspace:*
         version: link:../../packages/shared

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@chalkboard/core": "workspace:*",
+    "@chalkboard/llm": "workspace:*",
     "@chalkboard/shared": "workspace:*",
     "commander": "^12.1.0"
   },
