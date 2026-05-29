@@ -23,7 +23,8 @@ prompt                 → "explain hash tables"
 
 ```bash
 # 0. system deps
-#   - node >= 20, pnpm
+#   - node >= 20.6 (needed for --env-file-if-exists)
+#   - pnpm
 #   - ffmpeg + ffprobe on PATH
 #   - (optional) piper for local TTS
 
@@ -36,13 +37,14 @@ pnpm --filter @chalkboard/renderer exec playwright install chromium
 pnpm --filter chalkboard start generate "explain hash tables" \
   --llm stub --tts stub -o out.mp4
 
-# 2. real run with Anthropic + Piper
-export ANTHROPIC_API_KEY=...
-# piper model: download e.g.
-# https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
-export PIPER_MODEL=/path/to/en_US-lessac-medium.onnx
+# 2. real run — put your keys in .env at the repo root
+cp .env.example .env
+# edit .env, then:
 pnpm --filter chalkboard start generate "explain hash tables" -o out.mp4
 ```
+
+Both `apps/server` and `apps/cli` auto-load `.env` from the repo root (and from
+their own dir) via Node 20's `--env-file-if-exists`. No `dotenv` dep.
 
 ## Project layout
 

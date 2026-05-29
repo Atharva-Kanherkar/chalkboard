@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
-    "start": "tsx src/index.ts",
+    "start": "tsx --env-file-if-exists=../../.env src/index.ts",
     "test": "vitest run",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
