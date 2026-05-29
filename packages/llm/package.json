@@ -13,14 +13,16 @@
     "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "smoke": "tsx scripts/smoke.ts",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
-    "@chalkboard/shared": "workspace:*",
     "@anthropic-ai/sdk": "^0.36.3",
+    "@chalkboard/shared": "workspace:*",
     "openai": "^4.77.0"
   },
   "devDependencies": {
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }
