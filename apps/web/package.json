@@ -1,0 +1,13 @@
+{
+  "name": "@chalkboard/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static web UI for chalkboard. Served by the chalkboard server.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'static — no build step'",
+    "typecheck": "echo 'no ts in apps/web; skipping'",
+    "clean": "echo 'nothing to clean'"
+  }
+}

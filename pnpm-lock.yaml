@@ -60,6 +60,9 @@ importers:
       '@chalkboard/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@chalkboard/web':
+        specifier: workspace:*
+        version: link:../web
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.14(hono@4.12.23)
@@ -79,6 +82,8 @@ importers:
       vitest:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)
+
+  apps/web: {}
 
   examples:
     dependencies:

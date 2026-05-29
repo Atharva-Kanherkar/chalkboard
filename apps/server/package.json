@@ -15,6 +15,7 @@
   "dependencies": {
     "@chalkboard/core": "workspace:*",
     "@chalkboard/shared": "workspace:*",
+    "@chalkboard/web": "workspace:*",
     "@hono/node-server": "^1.13.7",
     "hono": "^4.6.16"
   },

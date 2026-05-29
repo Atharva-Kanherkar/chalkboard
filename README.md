@@ -115,12 +115,17 @@ await generate({
 });
 ```
 
-### HTTP service
+### HTTP service + web UI
 
 ```bash
 pnpm --filter @chalkboard/server start
 # → chalkboard server listening on http://0.0.0.0:4140
+```
 
+Open <http://localhost:4140> in a browser for the prompt → mp4 web UI.
+The same port also serves the HTTP API:
+
+```bash
 curl -X POST http://localhost:4140/generate \
   -H 'content-type: application/json' \
   -d '{
@@ -134,8 +139,8 @@ curl http://localhost:4140/jobs/$ID            # poll
 curl http://localhost:4140/jobs/$ID/video -o out.mp4
 ```
 
-The default storage backend writes to `./out`; configure with `STORAGE_DIR`.
-The default port is 4140 (`PORT`).
+Configure: `STORAGE_DIR` (default `./out`), `PORT` (default 4140).
+API keys are read from the server's env; the web UI never sees them.
 
 ### SceneScript
 

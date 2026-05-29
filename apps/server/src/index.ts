@@ -7,7 +7,11 @@
 //   GET  /healthz           -> { ok: true }
 
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { LLMProviderConfig, TTSProviderConfig } from '@chalkboard/shared';
 import { JobStore, runJob, type Job } from './jobs.js';
 import { LocalFsStorage } from './storage.js';
@@ -91,6 +95,35 @@ app.get('/jobs/:id/video', async (c) => {
     },
   });
 });
+
+// Serve the static web UI at /, fallback to the API. Path resolves to
+// apps/web/public from the server's source dir (and post-build dist dir).
+const here = dirname(fileURLToPath(import.meta.url));
+const webRoot = resolveWebRoot(here);
+if (webRoot) {
+  app.use(
+    '/*',
+    serveStatic({
+      root: webRoot,
+      rewriteRequestPath: (p) => (p === '/' ? '/index.html' : p),
+    }),
+  );
+  console.log(`chalkboard web UI served from ${webRoot}`);
+} else {
+  console.log('chalkboard: no web UI dir found, serving API only');
+}
+
+function resolveWebRoot(serverSrcDir: string): string | null {
+  const candidates = [
+    resolve(serverSrcDir, '../../web/public'),
+    resolve(serverSrcDir, '../../../apps/web/public'),
+    resolve(process.cwd(), 'apps/web/public'),
+  ];
+  for (const c of candidates) {
+    if (existsSync(c)) return c;
+  }
+  return null;
+}
 
 serve({ fetch: app.fetch, port, hostname: host }, (info) => {
   console.log(`chalkboard server listening on http://${info.address}:${info.port}`);

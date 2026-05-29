@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>chalkboard — prompt → explainer video</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>chalkboard</h1>
+      <p class="tagline">Open-source whiteboard-style explainer videos. Prompt → mp4.</p>
+      <a class="github" href="https://github.com/Atharva-Kanherkar/chalkboard" target="_blank"
+        >source</a
+      >
+    </header>
+
+    <main>
+      <section class="composer" aria-label="Generate a video">
+        <label for="prompt">Topic</label>
+        <textarea
+          id="prompt"
+          rows="3"
+          placeholder="explain how a hash table handles collisions, with a code example"
+        ></textarea>
+
+        <details class="options">
+          <summary>Advanced options</summary>
+          <div class="option-grid">
+            <label
+              >Language
+              <input id="lang" type="text" value="en" />
+            </label>
+            <label
+              >Aspect ratio
+              <select id="aspect">
+                <option value="16:9">16:9 — landscape</option>
+                <option value="9:16">9:16 — portrait</option>
+                <option value="1:1">1:1 — square</option>
+              </select>
+            </label>
+            <label
+              >LLM
+              <select id="llm">
+                <option value="">auto (env)</option>
+                <option value="anthropic">Anthropic Claude</option>
+                <option value="openai">OpenAI</option>
+                <option value="ollama">Ollama (local)</option>
+                <option value="stub">Stub (no API)</option>
+              </select>
+            </label>
+            <label
+              >TTS
+              <select id="tts">
+                <option value="">auto (env)</option>
+                <option value="piper">Piper (local)</option>
+                <option value="openai">OpenAI</option>
+                <option value="elevenlabs">ElevenLabs</option>
+                <option value="stub">Stub (sine wave)</option>
+              </select>
+            </label>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button id="go" type="button">Generate video</button>
+          <span id="hint" class="hint"></span>
+        </div>
+      </section>
+
+      <section id="progress" class="progress hidden" aria-live="polite">
+        <h2>Working…</h2>
+        <ol id="progress-log" class="progress-log"></ol>
+      </section>
+
+      <section id="result" class="result hidden">
+        <h2>Done</h2>
+        <video id="player" controls preload="metadata" playsinline></video>
+        <div class="result-actions">
+          <a id="download" download="chalkboard.mp4">Download mp4</a>
+          <button id="new" type="button">New video</button>
+        </div>
+      </section>
+
+      <section id="error" class="error hidden" role="alert">
+        <h2>Something went wrong</h2>
+        <pre id="error-message"></pre>
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Self-host: <code>pnpm --filter @chalkboard/server start</code>. API keys are read from
+        server env; this UI never sees them.
+      </p>
+    </footer>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
