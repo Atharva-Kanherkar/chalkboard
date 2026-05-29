@@ -190,6 +190,9 @@ importers:
       '@chalkboard/whiteboard':
         specifier: workspace:*
         version: link:../whiteboard
+      '@hpcc-js/wasm-graphviz':
+        specifier: ^1.22.0
+        version: 1.22.0
       playwright:
         specifier: ^1.49.1
         version: 1.60.0
@@ -533,6 +536,9 @@ packages:
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
+
+  '@hpcc-js/wasm-graphviz@1.22.0':
+    resolution: {integrity: sha512-/l6m+ev4TzYwiSm2pklMALiKejuheJwFkOHKrTAvFei+US+MVv6Vgk06xMc4Mjn57WiqzheMVGnmNu1iqkcBdA==}
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -1237,6 +1243,8 @@ snapshots:
   '@hono/node-server@1.19.14(hono@4.12.23)':
     dependencies:
       hono: 4.12.23
+
+  '@hpcc-js/wasm-graphviz@1.22.0': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 

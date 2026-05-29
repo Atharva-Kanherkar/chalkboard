@@ -16,6 +16,7 @@ import { existsSync } from 'node:fs';
 import type { SceneScript } from '@chalkboard/shared';
 import { chromium, type Browser, type Page } from 'playwright';
 import { planSceneTiming, type SceneTiming, type AudioInfo } from './timing.js';
+import { expandGraphvizInScript } from './graphviz.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -41,10 +42,16 @@ export interface RenderOutput {
 }
 
 export async function renderScript(input: RenderInput): Promise<RenderOutput> {
-  const { script, audioInfo, workDir } = input;
+  const { audioInfo, workDir } = input;
   const baseName = input.baseName ?? 'render';
 
   await mkdir(workDir, { recursive: true });
+
+  // Pre-process: expand `graphviz` elements (DOT strings) into concrete
+  // chalkboard elements (rectangle/ellipse/text/arrow) with positions
+  // computed by Graphviz's layout engine.
+  input.onProgress?.('expanding graphviz elements');
+  const script = await expandGraphvizInScript(input.script);
 
   const timings: SceneTiming[] = script.scenes.map((scene, i) =>
     planSceneTiming(scene, audioInfo[i]),

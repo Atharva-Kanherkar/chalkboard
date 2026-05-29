@@ -90,6 +90,31 @@ Pastel palette (use these for fills): "#a5d8ff" blue, "#ffec99" yellow, "#b2f2bb
 - highlight: { x, y, width, height, backgroundColor? }
   Translucent marker-pen rectangle. Layer it BEFORE the elements you want highlighted (highlight appears first in the elements array). Default color "#fff3a8".
 
+### Graphviz (USE THIS for data structures and graphs)
+- graphviz: { x, y, width, height, dot, nodeFill? }
+  When you would otherwise lay out a network of related nodes (linked list, tree, DAG, hash bucket map, neural network layer, finite state machine, dependency graph), DO NOT compute coordinates yourself — emit a "graphviz" element whose "dot" field is a DOT-language graph. Chalkboard runs Graphviz layout and converts each node + edge into hand-drawn shapes filling the (x, y, width, height) region you specify.
+
+  Always use graphviz for:
+  - linked lists ("a -> b -> c -> null")
+  - trees (binary, n-ary, syntax trees)
+  - hash tables with chaining
+  - state machines / FSMs
+  - call graphs / dependency graphs
+  - neural network layers
+  - any time there are >3 nodes connected by arrows
+
+  DOT cheat sheet:
+    digraph { rankdir=LR; a [label="head"]; b [label="42"]; a -> b; b -> null [label="next"]; }
+    digraph { rankdir=TB; root -> left; root -> right; }   // tree
+    digraph { node [shape=box,style=filled,fillcolor="#a5d8ff"]; ... }
+
+  - rankdir=LR for horizontal flows (linked lists, pipelines); rankdir=TB for trees, top-down.
+  - Use shape=box, ellipse, or diamond. shape=record handled like box for now.
+  - Set node [style=filled, fillcolor=<color>] to color nodes (use the pastel palette).
+  - Edge labels: a -> b [label="O(1)"].
+  - Give the graphviz element a generous bbox (e.g. x:160, y:240, width:1600, height:680) — it fills the area.
+  - You can layer plain text/title elements BEFORE the graphviz element in the same scene for headers.
+
 ## Style defaults (use unless you have a reason)
 
 - title fontSize 56, body fontSize 24
@@ -100,7 +125,7 @@ Pastel palette (use these for fills): "#a5d8ff" blue, "#ffec99" yellow, "#b2f2bb
 ## For programming/learning topics specifically
 
 - Show actual code in code-block elements. Don't describe code — show it.
-- For data structures, lay out the boxes as the actual structure (hash table = row of slots, linked list = chain of boxes with arrows, tree = parent connected to children).
+- For data structures and graphs of any non-trivial shape, USE the graphviz element. Don't lay out hash tables / linked lists / trees by hand — emit DOT and let the layout engine place them.
 - Use step-markers when explaining a procedure step-by-step.
 - When comparing two approaches, use a group on each side.
 - When narrating an algorithm, the narration should "drive" — i.e. each visible step matches what the voice says at that beat.

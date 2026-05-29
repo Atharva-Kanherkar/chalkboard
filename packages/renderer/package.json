@@ -14,11 +14,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "smoke": "tsx scripts/smoke.ts",
+    "smoke:graphviz": "tsx scripts/graphviz-smoke.ts",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {
     "@chalkboard/shared": "workspace:*",
     "@chalkboard/whiteboard": "workspace:*",
+    "@hpcc-js/wasm-graphviz": "^1.22.0",
     "playwright": "^1.49.1"
   },
   "devDependencies": {
