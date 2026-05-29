@@ -1,23 +1,15 @@
 // chalkboard scene player. Runs inside headless Chromium under Playwright.
 //
-// Reads `window.__chalkboard__` injected by the renderer process:
-//   { script: SceneScript,
-//     timings: SceneTiming[],
-//     canvas: { width, height },
-//     readyMarker: 'CHALKBOARD_READY',
-//     doneMarker: 'CHALKBOARD_DONE' }
-//
-// Plays through each scene by mounting an Excalidraw instance and progressively
-// fading elements in (opacity-only animation matching skillware's tutor feel).
-// Audio is muxed post-hoc — this file does NOT play audio; it just controls the
-// visual timeline so the recorded video matches the audio durations the
-// renderer planned.
+// Reads window.__chalkboard__ injected by the renderer process. Renders each
+// scene's elements onto a single <canvas> using RoughJS for the hand-drawn
+// look. Animates by fading elements in (opacity ramp), staggered, matching the
+// pacing of skillware's draw-animation. Audio is muxed post-hoc.
 //
 // Signals to the host:
-//   - logs `[chalkboard] READY` once the canvas is mounted and the first frame
-//     is painted, so Playwright can start recording.
-//   - logs `[chalkboard] DONE` once the last scene finishes, so Playwright can
-//     stop recording.
+//   - logs `[chalkboard] READY` once the canvas is ready and the page has had
+//     one paint, so Playwright can start recording.
+//   - logs `[chalkboard] DONE` when the last scene finishes, so Playwright
+//     can stop.
 
 (() => {
   const cfg = window.__chalkboard__;
@@ -26,221 +18,255 @@
     return;
   }
 
-  const { ExcalidrawLib } = window;
-  // The Excalidraw UMD build exposes a global `ExcalidrawLib` (React component
-  // factory) and `Excalidraw` (the component itself). Names changed across
-  // versions; try the modern shape first, fall back to legacy.
-  const Excalidraw =
-    (ExcalidrawLib && (ExcalidrawLib.Excalidraw || ExcalidrawLib.default)) ||
-    window.Excalidraw ||
-    null;
-  if (!Excalidraw) {
-    console.error('[chalkboard] Excalidraw global not found');
+  const canvas = document.getElementById('canvas');
+  canvas.width = cfg.canvas.width;
+  canvas.height = cfg.canvas.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    console.error('[chalkboard] failed to get 2D context');
     return;
   }
 
-  const root = ReactDOM.createRoot(document.getElementById('canvas-host'));
-  let api = null;
+  // Wait for RoughJS to be available.
+  const waitFor = (test, label, timeoutMs = 10000) =>
+    new Promise((resolve, reject) => {
+      const start = performance.now();
+      (function spin() {
+        if (test()) return resolve();
+        if (performance.now() - start > timeoutMs) {
+          return reject(new Error(`[chalkboard] timed out waiting for ${label}`));
+        }
+        setTimeout(spin, 16);
+      })();
+    });
 
-  // Mount Excalidraw with viewMode (no UI). The `excalidrawAPI` callback gives
-  // us imperative control over the scene.
-  const host = document.getElementById('canvas-host');
-  host.style.width = cfg.canvas.width + 'px';
-  host.style.height = cfg.canvas.height + 'px';
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  const initialData = {
-    elements: [],
-    appState: {
-      viewBackgroundColor: '#fafafa',
-      currentItemRoughness: 1,
-      currentItemFontFamily: 1,
-      gridSize: null,
-      zoom: { value: 1 },
-      scrollX: 0,
-      scrollY: 0,
-    },
-  };
+  // -------- drawing primitives --------
+  function paintBg() {
+    ctx.fillStyle = '#fafafa';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
-  root.render(
-    React.createElement(Excalidraw, {
-      initialData,
-      viewModeEnabled: true,
-      zenModeEnabled: true,
-      gridModeEnabled: false,
-      UIOptions: {
-        canvasActions: {
-          changeViewBackgroundColor: false,
-          clearCanvas: false,
-          export: false,
-          loadScene: false,
-          saveAsImage: false,
-          saveToActiveFile: false,
-          theme: false,
-          toggleTheme: false,
-        },
-      },
-      excalidrawAPI: (a) => {
-        api = a;
-      },
-    }),
-  );
+  function rcFor() {
+    return window.rough.canvas(canvas);
+  }
 
-  // ---------- animation helpers (mirrors skillware/draw-animation.ts) ----------
-  let nonceSeed = 1;
-  const nextNonce = () => ((nonceSeed = (nonceSeed + 1) % 2_000_000_000), nonceSeed);
-  const easeOutCubic = (t) => {
+  function fillStyleFor(el) {
+    const fs = el.fillStyle;
+    if (fs === 'solid') return 'solid';
+    if (fs === 'cross-hatch') return 'cross-hatch';
+    if (fs === 'zigzag') return 'zigzag';
+    if (fs === 'dots') return 'dots';
+    return 'hachure';
+  }
+
+  function commonOpts(el, alpha) {
+    const stroke = el.strokeColor || '#1e1e1e';
+    const fill = el.backgroundColor && el.backgroundColor !== 'transparent' ? el.backgroundColor : undefined;
+    const opts = {
+      stroke,
+      strokeWidth: el.strokeWidth || 2,
+      roughness: typeof el.roughness === 'number' ? el.roughness : 1,
+      seed: el.seed || hashSeed(el.id || ''),
+    };
+    if (fill) {
+      opts.fill = fill;
+      opts.fillStyle = fillStyleFor(el);
+    }
+    return opts;
+  }
+
+  function hashSeed(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+    return Math.abs(h) || 1;
+  }
+
+  function drawRect(rc, el) {
+    rc.rectangle(el.x, el.y, el.width, el.height, commonOpts(el));
+  }
+
+  function drawEllipse(rc, el) {
+    const cx = el.x + el.width / 2;
+    const cy = el.y + el.height / 2;
+    rc.ellipse(cx, cy, el.width, el.height, commonOpts(el));
+  }
+
+  function drawDiamond(rc, el) {
+    const x = el.x;
+    const y = el.y;
+    const w = el.width;
+    const h = el.height;
+    const pts = [
+      [x + w / 2, y],
+      [x + w, y + h / 2],
+      [x + w / 2, y + h],
+      [x, y + h / 2],
+    ];
+    rc.polygon(pts, commonOpts(el));
+  }
+
+  function drawLine(rc, el) {
+    const pts = el.points || [
+      [0, 0],
+      [el.width || 100, el.height || 0],
+    ];
+    const opts = commonOpts(el);
+    delete opts.fill; // never fill a line
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      rc.line(el.x + a[0], el.y + a[1], el.x + b[0], el.y + b[1], opts);
+    }
+  }
+
+  function drawArrow(rc, el) {
+    drawLine(rc, el);
+    // Arrowhead at the last point.
+    const pts = el.points || [
+      [0, 0],
+      [el.width || 100, el.height || 0],
+    ];
+    const last = pts[pts.length - 1];
+    const prev = pts[pts.length - 2] || [0, 0];
+    const tipX = el.x + last[0];
+    const tipY = el.y + last[1];
+    const dx = last[0] - prev[0];
+    const dy = last[1] - prev[1];
+    const angle = Math.atan2(dy, dx);
+    const headLen = 22;
+    const spread = Math.PI / 7;
+    const opts = commonOpts(el);
+    delete opts.fill;
+    rc.line(
+      tipX,
+      tipY,
+      tipX - headLen * Math.cos(angle - spread),
+      tipY - headLen * Math.sin(angle - spread),
+      opts,
+    );
+    rc.line(
+      tipX,
+      tipY,
+      tipX - headLen * Math.cos(angle + spread),
+      tipY - headLen * Math.sin(angle + spread),
+      opts,
+    );
+  }
+
+  function drawText(el) {
+    const fontSize = el.fontSize || 24;
+    const family = el.fontFamily === 2 ? 'Helvetica, Arial, sans-serif' : "'Virgil', cursive";
+    ctx.fillStyle = el.strokeColor || '#1e1e1e';
+    ctx.font = `${fontSize}px ${family}`;
+    ctx.textBaseline = 'top';
+    const lines = String(el.text || '').split('\n');
+    const lineHeight = fontSize * 1.25;
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], el.x, el.y + i * lineHeight);
+    }
+  }
+
+  function drawElement(rc, el) {
+    switch (el.type) {
+      case 'rectangle':
+        return drawRect(rc, el);
+      case 'ellipse':
+        return drawEllipse(rc, el);
+      case 'diamond':
+        return drawDiamond(rc, el);
+      case 'line':
+        return drawLine(rc, el);
+      case 'arrow':
+        return drawArrow(rc, el);
+      case 'text':
+        return drawText(el);
+      default:
+        // Unknown type → skip silently.
+        return undefined;
+    }
+  }
+
+  // -------- animation --------
+  function easeOutCubic(t) {
     const c = Math.min(1, Math.max(0, t));
     return 1 - (1 - c) ** 3;
-  };
-
-  function drawSnapshot(el, p) {
-    const eased = easeOutCubic(p);
-    const targetOpacity = typeof el.opacity === 'number' ? el.opacity : 100;
-    return {
-      ...el,
-      opacity: Math.max(0, Math.round(targetOpacity * eased)),
-      version: (el.version ?? 1) + Math.ceil(p * 1000) + 1,
-      versionNonce: nextNonce(),
-    };
   }
 
-  function finalSnapshot(el) {
-    return {
-      ...el,
-      opacity: typeof el.opacity === 'number' ? el.opacity : 100,
-      version: (el.version ?? 1) + 1002,
-      versionNonce: nextNonce(),
-    };
-  }
-
-  function normalizeElement(el) {
-    const norm = {
-      opacity: 100,
-      roughness: 1,
-      strokeColor: '#1e1e1e',
-      ...el,
-    };
-    if (el.type === 'text') {
-      norm.textAlign = norm.textAlign ?? 'left';
-      norm.verticalAlign = norm.verticalAlign ?? 'top';
-      norm.fontFamily = norm.fontFamily ?? 1;
-      norm.fontSize = norm.fontSize ?? 24;
-      norm.lineHeight = norm.lineHeight ?? 1.25;
-    }
-    if (el.type === 'arrow' || el.type === 'line' || el.type === 'freedraw') {
-      const points = el.points;
-      if (!Array.isArray(points) || points.length < 2) {
-        const w = el.width || 100;
-        const h = typeof el.height === 'number' ? el.height : 0;
-        norm.points = [
-          [0, 0],
-          [w, h],
-        ];
+  /**
+   * Re-paint the canvas showing element `i` at progress `p` and all prior
+   * elements fully drawn. Implemented by painting everything into an offscreen
+   * canvas at full opacity, then blitting with globalAlpha for the current
+   * element.
+   */
+  function paintScene(elements, currentIdx, currentProgress) {
+    paintBg();
+    const rc = rcFor();
+    for (let j = 0; j < elements.length; j++) {
+      const el = elements[j];
+      if (j < currentIdx) {
+        ctx.globalAlpha = 1;
+        drawElement(rc, el);
+      } else if (j === currentIdx) {
+        ctx.globalAlpha = easeOutCubic(currentProgress);
+        drawElement(rc, el);
       }
+      // j > currentIdx: invisible — skip entirely.
     }
-    return norm;
+    ctx.globalAlpha = 1;
   }
 
-  // ---------- mermaid → elements (optional) ----------
-  async function renderMermaidToElements(code) {
-    try {
-      const [{ parseMermaidToExcalidraw }, exc] = await Promise.all([
-        import('https://unpkg.com/@excalidraw/mermaid-to-excalidraw@1.1.1/dist/index.es.js'),
-        import(
-          'https://unpkg.com/@excalidraw/excalidraw@0.17.6/dist/excalidraw.production.min.js'
-        ),
-      ]);
-      const { elements } = await parseMermaidToExcalidraw(code, {
-        themeVariables: { fontSize: '20px' },
-      });
-      const converted = exc.convertToExcalidrawElements(elements);
-      return converted.map((el) => ({
-        ...el,
-        roughness: 1,
-        fontFamily: el.type === 'text' ? 1 : el.fontFamily,
-      }));
-    } catch (err) {
-      console.warn('[chalkboard] mermaid render failed, skipping:', err);
-      return [];
-    }
-  }
-
-  // ---------- sleep / RAF loop ----------
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   function rafLoop(durationMs, onTick) {
-    return new Promise((resolveLoop) => {
+    return new Promise((resolve) => {
       const start = performance.now();
-      const tick = (now) => {
+      function tick(now) {
         const t = Math.min(1, (now - start) / durationMs);
         onTick(t);
-        if (t >= 1) {
-          resolveLoop();
-        } else {
-          requestAnimationFrame(tick);
-        }
-      };
+        if (t >= 1) resolve();
+        else requestAnimationFrame(tick);
+      }
       requestAnimationFrame(tick);
     });
   }
 
-  // ---------- main playback ----------
-  async function waitForApi() {
-    while (!api) await sleep(16);
-    return api;
-  }
-
   async function playScene(scene, timing) {
-    const a = await waitForApi();
-    // Resolve elements (mermaid scenes turn into elements on first play).
-    let elements = scene.elements ?? [];
-    if (!elements.length && scene.mermaid) {
-      elements = await renderMermaidToElements(scene.mermaid);
-    }
-    elements = elements.map(normalizeElement).map((el) => ({ ...el, opacity: 0 }));
+    const elements = Array.isArray(scene.elements) ? scene.elements : [];
+    // Clear board.
+    paintBg();
 
-    // Clear board, put placeholders in (all at opacity 0).
-    a.updateScene({ elements });
-    // Pan/zoom to fit, then lock view.
-    try {
-      a.scrollToContent(elements, { fitToContent: true, animate: false });
-    } catch {
-      /* older versions silently noop */
+    if (elements.length === 0) {
+      await sleep(timing.durationMs);
+      return;
     }
 
-    // Reveal each element in sequence.
     const stagger = timing.staggerMs;
     const drawDur = timing.drawDurationMs;
     for (let i = 0; i < elements.length; i++) {
-      const target = elements[i];
-      await rafLoop(drawDur, (t) => {
-        const updated = elements.map((el, idx) => {
-          if (idx < i) return finalSnapshot(el);
-          if (idx === i) return drawSnapshot(target, t);
-          return el; // still invisible
-        });
-        a.updateScene({ elements: updated });
-      });
+      await rafLoop(drawDur, (t) => paintScene(elements, i, t));
+      // Fix this element fully painted, advance.
+      paintScene(elements, i + 1, 0); // makes [0..i] all 'prior' = fully drawn
       const isLast = i === elements.length - 1;
-      if (!isLast && stagger > drawDur) {
-        await sleep(stagger - drawDur);
-      }
+      if (!isLast && stagger > drawDur) await sleep(stagger - drawDur);
     }
 
-    // Ensure final state is set, then hold.
-    a.updateScene({ elements: elements.map(finalSnapshot) });
-
-    const elapsedMs =
-      elements.length === 0
-        ? 0
-        : (elements.length - 1) * Math.max(stagger, drawDur) + drawDur;
-    const remaining = Math.max(0, timing.durationMs - elapsedMs);
-    await sleep(remaining);
+    // Hold tail: visuals already final; just wait until scene duration is up.
+    const usedMs = (elements.length - 1) * Math.max(stagger, drawDur) + drawDur;
+    const remaining = Math.max(0, timing.durationMs - usedMs);
+    if (remaining > 0) await sleep(remaining);
   }
 
   async function run() {
-    await waitForApi();
-    // Mark READY once API and an initial paint are ready.
-    await sleep(120);
+    try {
+      await waitFor(() => typeof window.rough !== 'undefined', 'roughjs', 8000);
+    } catch (err) {
+      console.error(err.message);
+      // Keep going with no rough — at least text scenes will render.
+    }
+    paintBg();
+    // Give the document a paint to make sure the canvas is on screen before
+    // recording starts.
+    await sleep(150);
     console.log('[chalkboard] READY');
 
     for (let i = 0; i < cfg.script.scenes.length; i++) {
@@ -254,6 +280,7 @@
     window.__chalkboard_done__ = true;
   }
 
-  // Kick off, but give React a few frames to mount first.
-  setTimeout(run, 250);
+  run().catch((err) => {
+    console.error('[chalkboard] player error:', err && err.message ? err.message : err);
+  });
 })();

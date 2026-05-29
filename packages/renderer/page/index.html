@@ -4,13 +4,20 @@
     <meta charset="utf-8" />
     <title>chalkboard render</title>
     <style>
+      :root {
+        --paper: #fafafa;
+        --ink: #1e1e1e;
+      }
       html,
       body {
         margin: 0;
         padding: 0;
-        background: #fafafa;
+        background: var(--paper);
         overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-family:
+          'Virgil', 'Comic Sans MS', 'Segoe Print', cursive, system-ui,
+          sans-serif;
+        color: var(--ink);
       }
       #stage {
         position: fixed;
@@ -18,43 +25,28 @@
         display: grid;
         place-items: center;
       }
-      #canvas-host {
-        background: #fafafa;
-        box-shadow: 0 0 0 0 transparent;
-        position: relative;
+      #canvas {
+        background: var(--paper);
+        display: block;
       }
-      .excalidraw {
-        --color-primary: #1e1e1e;
-      }
-      .excalidraw .App-toolbar,
-      .excalidraw .App-bottom-bar,
-      .excalidraw .App-menu,
-      .excalidraw .App-toolbar-content,
-      .excalidraw .layer-ui__wrapper,
-      .excalidraw .undo-redo-buttons,
-      .excalidraw .zoom-actions,
-      .excalidraw .scroll-back-to-content,
-      .excalidraw .help-icon,
-      .excalidraw .welcome-screen-container {
-        display: none !important;
-      }
-      .excalidraw .excalidraw-container,
-      .excalidraw .Island {
-        background: #fafafa !important;
+      /* Excalidraw Virgil font — loaded so headless Chromium renders the
+         hand-drawn look without needing a system font. */
+      @font-face {
+        font-family: 'Virgil';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block;
+        src:
+          local('Virgil'),
+          url('https://excalidraw.com/Virgil.woff2') format('woff2');
       }
     </style>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/@excalidraw/excalidraw@0.17.6/dist/excalidraw.production.min.css"
-    />
-    <script src="https://unpkg.com/@excalidraw/excalidraw@0.17.6/dist/excalidraw.production.min.js"></script>
+    <script src="https://unpkg.com/roughjs@4.6.6/bundled/rough.js"></script>
   </head>
   <body>
     <div id="stage">
-      <div id="canvas-host"></div>
+      <canvas id="canvas" width="1920" height="1080"></canvas>
     </div>
-    <script type="module" src="./player.js"></script>
+    <script src="./player.js"></script>
   </body>
 </html>
