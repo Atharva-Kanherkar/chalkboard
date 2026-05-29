@@ -23,12 +23,14 @@ export interface GenerateOptions {
 export type LLMProviderConfig =
   | { kind: 'anthropic'; apiKey?: string; model?: string }
   | { kind: 'openai'; apiKey?: string; model?: string; baseURL?: string }
-  | { kind: 'ollama'; baseURL?: string; model?: string };
+  | { kind: 'ollama'; baseURL?: string; model?: string }
+  | { kind: 'stub' };
 
 export type TTSProviderConfig =
   | { kind: 'piper'; modelPath?: string; binaryPath?: string }
   | { kind: 'openai'; apiKey?: string; model?: string; voice?: string }
-  | { kind: 'elevenlabs'; apiKey?: string; voiceId?: string };
+  | { kind: 'elevenlabs'; apiKey?: string; voiceId?: string }
+  | { kind: 'stub'; msPerChar?: number; frequency?: number };
 
 export type ProgressEvent =
   | { phase: 'script'; message: string }

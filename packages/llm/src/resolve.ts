@@ -3,6 +3,7 @@ import { AnthropicProvider } from './anthropic.js';
 import { OllamaProvider } from './ollama.js';
 import { OpenAIProvider } from './openai.js';
 import type { LLMProvider } from './provider.js';
+import { StubLLMProvider } from './stub.js';
 
 export function resolveLLMProvider(config: LLMProviderConfig | undefined): LLMProvider {
   const c = config ?? defaultConfigFromEnv();
@@ -23,10 +24,13 @@ export function resolveLLMProvider(config: LLMProviderConfig | undefined): LLMPr
         ...(c.baseURL ? { baseURL: c.baseURL } : {}),
         ...(c.model ? { model: c.model } : {}),
       });
+    case 'stub':
+      return new StubLLMProvider();
   }
 }
 
 function defaultConfigFromEnv(): LLMProviderConfig {
+  if (process.env['CHALKBOARD_LLM'] === 'stub') return { kind: 'stub' };
   if (process.env['ANTHROPIC_API_KEY']) return { kind: 'anthropic' };
   if (process.env['OPENAI_API_KEY']) return { kind: 'openai' };
   return { kind: 'ollama' };
