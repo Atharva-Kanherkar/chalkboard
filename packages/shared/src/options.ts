@@ -1,0 +1,38 @@
+export interface GenerateOptions {
+  prompt: string;
+  /** Output path for the final mp4. */
+  outputPath: string;
+  /** BCP-47 language tag (e.g. "en", "fr"). */
+  language?: string;
+  /** Voice id for the chosen TTS provider. */
+  voice?: string;
+  /** Aspect ratio of the final video. */
+  aspectRatio?: '16:9' | '9:16' | '1:1';
+  /** LLM provider override. */
+  llm?: LLMProviderConfig;
+  /** TTS provider override. */
+  tts?: TTSProviderConfig;
+  /** Working directory for intermediate files (audio, frames). Default: os tmpdir. */
+  workDir?: string;
+  /** Hook for progress reporting. */
+  onProgress?: (event: ProgressEvent) => void;
+  /** Don't delete the working directory after render — useful for debugging. */
+  keepWorkDir?: boolean;
+}
+
+export type LLMProviderConfig =
+  | { kind: 'anthropic'; apiKey?: string; model?: string }
+  | { kind: 'openai'; apiKey?: string; model?: string; baseURL?: string }
+  | { kind: 'ollama'; baseURL?: string; model?: string };
+
+export type TTSProviderConfig =
+  | { kind: 'piper'; modelPath?: string; binaryPath?: string }
+  | { kind: 'openai'; apiKey?: string; model?: string; voice?: string }
+  | { kind: 'elevenlabs'; apiKey?: string; voiceId?: string };
+
+export type ProgressEvent =
+  | { phase: 'script'; message: string }
+  | { phase: 'narration'; sceneIndex: number; sceneCount: number }
+  | { phase: 'render'; message: string }
+  | { phase: 'mux'; message: string }
+  | { phase: 'done'; outputPath: string };

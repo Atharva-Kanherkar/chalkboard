@@ -1,0 +1,34 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.turbo/
+.next/
+coverage/
+
+# build artifacts
+*.log
+.DS_Store
+
+# generated media (examples may commit small samples; large outputs ignored)
+/out/
+/tmp/
+*.mp4
+*.webm
+*.mp3
+*.wav
+!examples/**/*.mp4
+!examples/**/*.mp3
+
+# secrets
+.env
+.env.local
+.env.*.local
+
+# editor
+.vscode/
+.idea/
+
+# piper models (large; downloaded at runtime)
+/piper-models/
+*.onnx
+*.onnx.json

@@ -1,0 +1,29 @@
+{
+  "name": "chalkboard",
+  "version": "0.1.0",
+  "description": "CLI: prompt → whiteboard explainer mp4.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "chalkboard": "./dist/index.js"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@chalkboard/core": "workspace:*",
+    "@chalkboard/shared": "workspace:*",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

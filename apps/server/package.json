@@ -1,0 +1,27 @@
+{
+  "name": "@chalkboard/server",
+  "version": "0.1.0",
+  "description": "HTTP API for chalkboard: POST /generate, GET /jobs/:id, GET /jobs/:id/video.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@chalkboard/core": "workspace:*",
+    "@chalkboard/shared": "workspace:*",
+    "@hono/node-server": "^1.13.7",
+    "hono": "^4.6.16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

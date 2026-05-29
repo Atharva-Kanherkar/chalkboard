@@ -1,0 +1,114 @@
+// The top-level orchestrator: turn a prompt into an mp4.
+//
+//   prompt
+//     -> llm.generateScript()     SceneScript JSON
+//     -> tts.synthesize() per scene  → on-disk audio files
+//     -> renderer.renderScript()  → silent webm + scene timings
+//     -> renderer.muxFinal()      → final mp4
+//
+// Each step is wrapped with progress events so CLI/HTTP can surface state.
+
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import type { GenerateOptions, ProgressEvent, SceneScript } from '@chalkboard/shared';
+import { resolveLLMProvider } from '@chalkboard/llm';
+import { resolveTTSProvider } from '@chalkboard/narration';
+import { renderScript, muxFinal, probeAudioDuration } from '@chalkboard/renderer';
+
+export interface GenerateResult {
+  outputPath: string;
+  script: SceneScript;
+  /** Working dir used; undefined if it was cleaned up. */
+  workDir: string | undefined;
+}
+
+export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
+  const onProgress = opts.onProgress ?? noop;
+  const language = opts.language ?? 'en';
+  const aspectRatio = opts.aspectRatio ?? '16:9';
+
+  const llm = resolveLLMProvider(opts.llm);
+  const tts = resolveTTSProvider(opts.tts);
+
+  // -------- 1. script ----------
+  emit(onProgress, { phase: 'script', message: `generating script via ${llm.name}` });
+  const script = await llm.generateScript({ prompt: opts.prompt, language, aspectRatio });
+  emit(onProgress, {
+    phase: 'script',
+    message: `script ready (${script.scenes.length} scenes)`,
+  });
+
+  // -------- 2. work dir ----------
+  const workDir = opts.workDir
+    ? resolve(opts.workDir)
+    : await mkdtemp(join(tmpdir(), 'chalkboard-'));
+
+  try {
+    // -------- 3. narration per scene ----------
+    const audioPaths: string[] = [];
+    const audioDurations: number[] = [];
+    for (let i = 0; i < script.scenes.length; i++) {
+      const scene = script.scenes[i]!;
+      emit(onProgress, {
+        phase: 'narration',
+        sceneIndex: i,
+        sceneCount: script.scenes.length,
+      });
+      const out = await tts.synthesize({
+        text: scene.narration,
+        language: script.meta.language,
+        ...(opts.voice ? { voice: opts.voice } : script.meta.voice ? { voice: script.meta.voice } : {}),
+      });
+      const path = join(workDir, `scene-${i}.${out.format}`);
+      await writeFile(path, out.bytes);
+      audioPaths.push(path);
+      audioDurations.push(await probeAudioDuration(path));
+    }
+
+    // -------- 4. render silent video ----------
+    emit(onProgress, { phase: 'render', message: 'rendering silent video' });
+    const rendered = await renderScript({
+      script,
+      audioInfo: audioDurations.map((durationMs) => ({ durationMs })),
+      workDir,
+      onProgress: (msg) => emit(onProgress, { phase: 'render', message: msg }),
+    });
+
+    // -------- 5. mux ----------
+    emit(onProgress, { phase: 'mux', message: 'muxing audio' });
+    const outputPath = resolve(opts.outputPath);
+    await muxFinal({
+      silentVideoPath: rendered.silentVideoPath,
+      audioTracks: audioPaths.map((path, i) => ({ path, durationMs: audioDurations[i]! })),
+      timings: rendered.timings,
+      outputPath,
+      workDir,
+      onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
+    });
+
+    emit(onProgress, { phase: 'done', outputPath });
+
+    return {
+      outputPath,
+      script,
+      workDir: opts.keepWorkDir ? workDir : undefined,
+    };
+  } finally {
+    if (!opts.keepWorkDir && !opts.workDir) {
+      await rm(workDir, { recursive: true, force: true }).catch(() => undefined);
+    }
+  }
+}
+
+function emit(fn: (e: ProgressEvent) => void, event: ProgressEvent) {
+  try {
+    fn(event);
+  } catch {
+    // user hook errors must not break the pipeline
+  }
+}
+
+function noop(): void {
+  /* no-op */
+}
