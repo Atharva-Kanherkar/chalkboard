@@ -61,7 +61,7 @@
     return 'hachure';
   }
 
-  function commonOpts(el, alpha) {
+  function commonOpts(el) {
     const stroke = el.strokeColor || '#1e1e1e';
     const fill =
       el.backgroundColor && el.backgroundColor !== 'transparent' ? el.backgroundColor : undefined;
@@ -71,6 +71,11 @@
       roughness: typeof el.roughness === 'number' ? el.roughness : 1,
       seed: el.seed || hashSeed(el.id || ''),
     };
+    if (el.strokeStyle === 'dashed') {
+      opts.strokeLineDash = [12, 8];
+    } else if (el.strokeStyle === 'dotted') {
+      opts.strokeLineDash = [2, 8];
+    }
     if (fill) {
       opts.fill = fill;
       opts.fillStyle = fillStyleFor(el);
@@ -122,24 +127,90 @@
     }
   }
 
-  function drawArrow(rc, el) {
-    drawLine(rc, el);
-    // Arrowhead at the last point.
-    const pts = el.points || [
-      [0, 0],
-      [el.width || 100, el.height || 0],
-    ];
-    const last = pts[pts.length - 1];
-    const prev = pts[pts.length - 2] || [0, 0];
-    const tipX = el.x + last[0];
-    const tipY = el.y + last[1];
-    const dx = last[0] - prev[0];
-    const dy = last[1] - prev[1];
-    const angle = Math.atan2(dy, dx);
-    const headLen = 22;
-    const spread = Math.PI / 7;
+  // Bounding-box center for an element (defaults if width/height missing).
+  function centerOf(el) {
+    const w = el.width || 0;
+    const h = el.height || 0;
+    return { x: (el.x || 0) + w / 2, y: (el.y || 0) + h / 2 };
+  }
+
+  // Where a ray from `from` towards `to` exits the bounding box of `from`.
+  // For rectangles/diamonds we use axis-aligned bbox edges; for ellipses we
+  // approximate with the ellipse boundary along the ray. This gets arrows to
+  // touch shapes cleanly without coordinate math from the LLM.
+  function exitPoint(el, towards) {
+    const c = centerOf(el);
+    const dx = towards.x - c.x;
+    const dy = towards.y - c.y;
+    if (dx === 0 && dy === 0) return c;
+    const w = (el.width || 0) / 2;
+    const h = (el.height || 0) / 2;
+
+    if (el.type === 'ellipse') {
+      // Solve for t where ((dx*t)/w)^2 + ((dy*t)/h)^2 = 1
+      const denom = Math.sqrt((dx * dx) / (w * w || 1) + (dy * dy) / (h * h || 1));
+      const t = 1 / denom;
+      return { x: c.x + dx * t, y: c.y + dy * t };
+    }
+
+    // Rect / diamond / default: intersect the ray with the rect edges.
+    const tx = w === 0 ? Infinity : Math.abs(w / dx);
+    const ty = h === 0 ? Infinity : Math.abs(h / dy);
+    const t = Math.min(tx, ty);
+    return { x: c.x + dx * t, y: c.y + dy * t };
+  }
+
+  function drawArrow(rc, el, byId) {
     const opts = commonOpts(el);
     delete opts.fill;
+
+    // If from/to are set, look them up and compute endpoints at the edges
+    // of each shape facing the other. This lets the LLM omit coordinates
+    // entirely for an arrow between two named shapes.
+    let startX, startY, tipX, tipY;
+    if (el.from && el.to && byId && byId[el.from] && byId[el.to]) {
+      const fromEl = byId[el.from];
+      const toEl = byId[el.to];
+      const fromExit = exitPoint(fromEl, centerOf(toEl));
+      const toExit = exitPoint(toEl, centerOf(fromEl));
+      startX = fromExit.x;
+      startY = fromExit.y;
+      tipX = toExit.x;
+      tipY = toExit.y;
+      rc.line(startX, startY, tipX, tipY, opts);
+
+      // Optional label sitting halfway along the arrow.
+      if (el.label) {
+        const fontSize = el.labelFontSize || 22;
+        ctx.fillStyle = el.strokeColor || '#1e1e1e';
+        ctx.font = `${fontSize}px ${familyFor({ fontFamily: 1 })}`;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        // Slightly offset the label off the line so it doesn't overlap.
+        const mx = (startX + tipX) / 2;
+        const my = (startY + tipY) / 2 - fontSize * 0.9;
+        ctx.fillText(String(el.label), mx, my);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+      }
+    } else {
+      drawLine(rc, el);
+      const pts = el.points || [
+        [0, 0],
+        [el.width || 100, el.height || 0],
+      ];
+      const last = pts[pts.length - 1];
+      const prev = pts[pts.length - 2] || [0, 0];
+      tipX = (el.x || 0) + last[0];
+      tipY = (el.y || 0) + last[1];
+      startX = (el.x || 0) + prev[0];
+      startY = (el.y || 0) + prev[1];
+    }
+
+    // Arrowhead at (tipX, tipY) pointing in direction (tipX-startX, tipY-startY).
+    const angle = Math.atan2(tipY - startY, tipX - startX);
+    const headLen = 22;
+    const spread = Math.PI / 7;
     rc.line(
       tipX,
       tipY,
@@ -156,20 +227,188 @@
     );
   }
 
-  function drawText(el) {
-    const fontSize = el.fontSize || 24;
-    const family = el.fontFamily === 2 ? 'Helvetica, Arial, sans-serif' : "'Virgil', cursive";
-    ctx.fillStyle = el.strokeColor || '#1e1e1e';
-    ctx.font = `${fontSize}px ${family}`;
+  // -------- expanded vocabulary --------
+
+  function drawCodeBlock(rc, el) {
+    // Sketchy background panel + monospace text. The element behaves like a
+    // rectangle that holds its own multi-line code.
+    const width = el.width || 600;
+    const height = el.height || estimateCodeHeight(el);
+    const bgEl = {
+      ...el,
+      type: 'rectangle',
+      width,
+      height,
+      strokeColor: el.strokeColor || '#1e1e1e',
+      backgroundColor: el.backgroundColor || '#f1f3f5',
+      fillStyle: el.fillStyle || 'solid',
+      roughness: typeof el.roughness === 'number' ? el.roughness : 0.5,
+    };
+    rc.rectangle(bgEl.x, bgEl.y, bgEl.width, bgEl.height, commonOpts(bgEl));
+
+    // Code text, drawn directly (no wrap — code authors decide their own
+    // line breaks). Monospace family picked by familyFor() via type.
+    const fontSize = el.fontSize || 22;
+    ctx.fillStyle = el.textColor || '#1e1e1e';
+    ctx.font = `${fontSize}px ${familyFor(el)}`;
     ctx.textBaseline = 'top';
-    const lines = String(el.text || '').split('\n');
-    const lineHeight = fontSize * 1.25;
+    const lineHeight = fontSize * 1.35;
+    const padX = el.paddingX || 24;
+    const padY = el.paddingY || 18;
+    const lines = String(el.text || el.code || '').split('\n');
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], el.x, el.y + i * lineHeight);
+      ctx.fillText(lines[i], el.x + padX, el.y + padY + i * lineHeight);
     }
   }
 
-  function drawElement(rc, el) {
+  function estimateCodeHeight(el) {
+    const fontSize = el.fontSize || 22;
+    const lineHeight = fontSize * 1.35;
+    const padY = el.paddingY || 18;
+    const lines = String(el.text || el.code || '').split('\n').length;
+    return Math.max(80, padY * 2 + lines * lineHeight);
+  }
+
+  // Numbered circle that you can drop near a step. el.n is the displayed
+  // number; el.x/y is the center.
+  function drawStepMarker(rc, el) {
+    const r = el.radius || 28;
+    const cx = el.x + r;
+    const cy = el.y + r;
+    rc.circle(cx, cy, r * 2, {
+      ...commonOpts(el),
+      fill: el.backgroundColor || '#ffec99',
+      fillStyle: el.fillStyle || 'solid',
+    });
+    const fontSize = el.fontSize || Math.round(r * 0.95);
+    ctx.fillStyle = el.strokeColor || '#1e1e1e';
+    ctx.font = `bold ${fontSize}px ${familyFor({ fontFamily: 1 })}`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(el.n ?? '1'), cx, cy + 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+  }
+
+  // Labeled container: a thin-bordered rectangle with an optional title
+  // floating above the top-left corner.
+  function drawGroup(rc, el) {
+    rc.rectangle(el.x, el.y, el.width || 200, el.height || 200, {
+      ...commonOpts(el),
+      strokeWidth: el.strokeWidth || 1.5,
+    });
+    if (el.label) {
+      const fontSize = el.fontSize || 22;
+      ctx.fillStyle = el.strokeColor || '#1e1e1e';
+      ctx.font = `${fontSize}px ${familyFor({ fontFamily: 1 })}`;
+      ctx.textBaseline = 'bottom';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(el.label), el.x + 8, el.y - 6);
+      ctx.textBaseline = 'top';
+    }
+  }
+
+  // Translucent rectangle painted UNDER content — use it to draw attention to
+  // a region of the canvas. No border, no roughness, just a soft color band.
+  function drawHighlight(el) {
+    const prevComp = ctx.globalCompositeOperation;
+    // multiply makes the highlight act like a marker pen — content underneath
+    // stays visible but tinted.
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = el.backgroundColor || '#fff3a8';
+    ctx.fillRect(el.x, el.y, el.width || 200, el.height || 40);
+    ctx.globalCompositeOperation = prevComp;
+  }
+
+  function familyFor(el) {
+    if (el.fontFamily === 2) return 'Helvetica, Arial, sans-serif';
+    if (el.fontFamily === 3 || el.type === 'code-block') {
+      return "'JetBrains Mono', 'Fira Code', 'Menlo', monospace";
+    }
+    return "'Virgil', cursive";
+  }
+
+  // Width available for a text element, derived from explicit maxWidth, or
+  // from a container element looked up by `containerId`, or null (no wrap).
+  function maxWidthFor(el, byId) {
+    if (typeof el.maxWidth === 'number') return el.maxWidth;
+    if (el.containerId && byId && byId[el.containerId]) {
+      const parent = byId[el.containerId];
+      if (typeof parent.width === 'number') {
+        const pad = typeof el.padding === 'number' ? el.padding : 24;
+        return Math.max(40, parent.width - 2 * pad);
+      }
+    }
+    return null;
+  }
+
+  // Word-wrap a single logical line to fit within `maxWidth` px on canvas
+  // context `ctx`. Hard newlines are honored beforehand (caller splits).
+  function wrapLine(text, maxWidth) {
+    if (!maxWidth) return [text];
+    const words = String(text).split(/\s+/).filter(Boolean);
+    if (words.length === 0) return [''];
+    const lines = [];
+    let current = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const w = words[i];
+      const test = current + ' ' + w;
+      if (ctx.measureText(test).width <= maxWidth) {
+        current = test;
+      } else {
+        lines.push(current);
+        current = w;
+      }
+    }
+    lines.push(current);
+    return lines;
+  }
+
+  function drawText(el, byId) {
+    const fontSize = el.fontSize || 24;
+    const family = familyFor(el);
+    ctx.fillStyle = el.strokeColor || '#1e1e1e';
+    ctx.font = `${fontSize}px ${family}`;
+    ctx.textBaseline = 'top';
+
+    const maxWidth = maxWidthFor(el, byId);
+    const align = el.textAlign || 'left';
+    const lineHeight = fontSize * 1.25;
+
+    // Hard newlines, then soft-wrap each piece.
+    const logical = String(el.text || '').split('\n');
+    const lines = [];
+    for (const piece of logical) {
+      const wrapped = wrapLine(piece, maxWidth);
+      for (const w of wrapped) lines.push(w);
+    }
+
+    // If text is anchored to a container, center vertically within it when
+    // requested via verticalAlign='middle'. Otherwise y is the top anchor.
+    let y0 = el.y;
+    if (el.containerId && byId && byId[el.containerId]) {
+      const parent = byId[el.containerId];
+      const parentTop = parent.y ?? el.y;
+      const parentH = parent.height ?? 0;
+      if (el.verticalAlign === 'middle') {
+        const blockH = lines.length * lineHeight;
+        y0 = parentTop + Math.max(0, (parentH - blockH) / 2);
+      }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      let x = el.x;
+      if (align !== 'left' && maxWidth) {
+        const w = ctx.measureText(line).width;
+        if (align === 'center') x = el.x + (maxWidth - w) / 2;
+        else if (align === 'right') x = el.x + (maxWidth - w);
+      }
+      ctx.fillText(line, x, y0 + i * lineHeight);
+    }
+  }
+
+  function drawElement(rc, el, byId) {
     switch (el.type) {
       case 'rectangle':
         return drawRect(rc, el);
@@ -180,9 +419,17 @@
       case 'line':
         return drawLine(rc, el);
       case 'arrow':
-        return drawArrow(rc, el);
+        return drawArrow(rc, el, byId);
       case 'text':
-        return drawText(el);
+        return drawText(el, byId);
+      case 'code-block':
+        return drawCodeBlock(rc, el);
+      case 'step-marker':
+        return drawStepMarker(rc, el);
+      case 'group':
+        return drawGroup(rc, el);
+      case 'highlight':
+        return drawHighlight(el);
       default:
         // Unknown type → skip silently.
         return undefined;
@@ -201,17 +448,17 @@
    * canvas at full opacity, then blitting with globalAlpha for the current
    * element.
    */
-  function paintScene(elements, currentIdx, currentProgress) {
+  function paintScene(elements, currentIdx, currentProgress, byId) {
     paintBg();
     const rc = rcFor();
     for (let j = 0; j < elements.length; j++) {
       const el = elements[j];
       if (j < currentIdx) {
         ctx.globalAlpha = 1;
-        drawElement(rc, el);
+        drawElement(rc, el, byId);
       } else if (j === currentIdx) {
         ctx.globalAlpha = easeOutCubic(currentProgress);
-        drawElement(rc, el);
+        drawElement(rc, el, byId);
       }
       // j > currentIdx: invisible — skip entirely.
     }
@@ -241,12 +488,19 @@
       return;
     }
 
+    // Build an id → element lookup so text can resolve containerId and
+    // arrows can resolve from/to targets without rescanning.
+    const byId = {};
+    for (const el of elements) {
+      if (el && el.id) byId[el.id] = el;
+    }
+
     const stagger = timing.staggerMs;
     const drawDur = timing.drawDurationMs;
     for (let i = 0; i < elements.length; i++) {
-      await rafLoop(drawDur, (t) => paintScene(elements, i, t));
+      await rafLoop(drawDur, (t) => paintScene(elements, i, t, byId));
       // Fix this element fully painted, advance.
-      paintScene(elements, i + 1, 0); // makes [0..i] all 'prior' = fully drawn
+      paintScene(elements, i + 1, 0, byId); // [0..i] all 'prior' = fully drawn
       const isLast = i === elements.length - 1;
       if (!isLast && stagger > drawDur) await sleep(stagger - drawDur);
     }
