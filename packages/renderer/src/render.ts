@@ -56,11 +56,7 @@ export async function renderScript(input: RenderInput): Promise<RenderOutput> {
   input.onProgress?.(`launching headless chromium (${canvas.width}x${canvas.height})`);
 
   const browser: Browser = await chromium.launch({
-    args: [
-      '--autoplay-policy=no-user-gesture-required',
-      '--disable-dev-shm-usage',
-      '--no-sandbox',
-    ],
+    args: ['--autoplay-policy=no-user-gesture-required', '--disable-dev-shm-usage', '--no-sandbox'],
   });
 
   try {
@@ -83,14 +79,17 @@ export async function renderScript(input: RenderInput): Promise<RenderOutput> {
     const donePromise = waitForConsole(page, 'DONE');
 
     // Inject the script BEFORE navigation so player.js sees it.
-    await page.addInitScript((payload) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__chalkboard__ = payload;
-    }, {
-      script,
-      timings,
-      canvas,
-    });
+    await page.addInitScript(
+      (payload) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__chalkboard__ = payload;
+      },
+      {
+        script,
+        timings,
+        canvas,
+      },
+    );
 
     await page.goto(`file://${pagePath}`, { waitUntil: 'load' });
 

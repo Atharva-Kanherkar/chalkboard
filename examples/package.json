@@ -1,0 +1,21 @@
+{
+  "name": "@chalkboard/examples",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "tsx render-script.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@chalkboard/core": "workspace:*",
+    "@chalkboard/narration": "workspace:*",
+    "@chalkboard/renderer": "workspace:*",
+    "@chalkboard/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

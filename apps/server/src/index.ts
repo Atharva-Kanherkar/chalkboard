@@ -33,9 +33,7 @@ app.post('/generate', async (c) => {
 
   const language = typeof body['language'] === 'string' ? body['language'] : 'en';
   const aspectRatio =
-    body['aspectRatio'] === '9:16' || body['aspectRatio'] === '1:1'
-      ? body['aspectRatio']
-      : '16:9';
+    body['aspectRatio'] === '9:16' || body['aspectRatio'] === '1:1' ? body['aspectRatio'] : '16:9';
   const voice = typeof body['voice'] === 'string' ? body['voice'] : undefined;
   const llm = parseLLMProvider(body['llm']);
   const tts = parseTTSProvider(body['tts']);

@@ -58,7 +58,11 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       const out = await tts.synthesize({
         text: scene.narration,
         language: script.meta.language,
-        ...(opts.voice ? { voice: opts.voice } : script.meta.voice ? { voice: script.meta.voice } : {}),
+        ...(opts.voice
+          ? { voice: opts.voice }
+          : script.meta.voice
+            ? { voice: script.meta.voice }
+            : {}),
       });
       const path = join(workDir, `scene-${i}.${out.format}`);
       await writeFile(path, out.bytes);

@@ -1,0 +1,258 @@
+{
+  "version": "1",
+  "meta": { "language": "en", "aspectRatio": "16:9", "title": "Hash tables in 90 seconds" },
+  "scenes": [
+    {
+      "id": "scene-1",
+      "narration": "A hash table maps keys to values. The trick: instead of scanning, we use a hash function to jump straight to the slot.",
+      "elements": [
+        {
+          "id": "s1-title",
+          "type": "text",
+          "x": 220,
+          "y": 160,
+          "text": "Hash tables",
+          "fontSize": 64,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        },
+        {
+          "id": "s1-key",
+          "type": "rectangle",
+          "x": 220,
+          "y": 320,
+          "width": 320,
+          "height": 100,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "#a5d8ff",
+          "fillStyle": "solid",
+          "roughness": 1
+        },
+        {
+          "id": "s1-key-label",
+          "type": "text",
+          "x": 260,
+          "y": 350,
+          "text": "key: \"alice\"",
+          "fontSize": 28,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        },
+        {
+          "id": "s1-arrow",
+          "type": "arrow",
+          "x": 560,
+          "y": 370,
+          "width": 220,
+          "height": 0,
+          "points": [
+            [0, 0],
+            [220, 0]
+          ],
+          "strokeColor": "#1e1e1e",
+          "endArrowhead": "arrow"
+        },
+        {
+          "id": "s1-hash",
+          "type": "ellipse",
+          "x": 800,
+          "y": 310,
+          "width": 240,
+          "height": 120,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "#ffec99",
+          "fillStyle": "solid"
+        },
+        {
+          "id": "s1-hash-label",
+          "type": "text",
+          "x": 840,
+          "y": 350,
+          "text": "hash(k)",
+          "fontSize": 28,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        },
+        {
+          "id": "s1-arrow-2",
+          "type": "arrow",
+          "x": 1060,
+          "y": 370,
+          "width": 220,
+          "height": 0,
+          "points": [
+            [0, 0],
+            [220, 0]
+          ],
+          "strokeColor": "#1e1e1e",
+          "endArrowhead": "arrow"
+        },
+        {
+          "id": "s1-slot",
+          "type": "rectangle",
+          "x": 1300,
+          "y": 320,
+          "width": 320,
+          "height": 100,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "#b2f2bb",
+          "fillStyle": "solid"
+        },
+        {
+          "id": "s1-slot-label",
+          "type": "text",
+          "x": 1360,
+          "y": 350,
+          "text": "slot 17",
+          "fontSize": 28,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        }
+      ]
+    },
+    {
+      "id": "scene-2",
+      "narration": "Two keys can collide on the same slot. The simplest fix is chaining: each slot holds a list, and we walk it.",
+      "elements": [
+        {
+          "id": "s2-title",
+          "type": "text",
+          "x": 220,
+          "y": 160,
+          "text": "Collision: chaining",
+          "fontSize": 52,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        },
+        {
+          "id": "s2-slot",
+          "type": "rectangle",
+          "x": 220,
+          "y": 320,
+          "width": 200,
+          "height": 100,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "#b2f2bb",
+          "fillStyle": "solid"
+        },
+        {
+          "id": "s2-slot-label",
+          "type": "text",
+          "x": 260,
+          "y": 350,
+          "text": "slot 17",
+          "fontSize": 28,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        },
+        {
+          "id": "s2-arr",
+          "type": "arrow",
+          "x": 420,
+          "y": 370,
+          "width": 100,
+          "height": 0,
+          "points": [
+            [0, 0],
+            [100, 0]
+          ],
+          "strokeColor": "#1e1e1e",
+          "endArrowhead": "arrow"
+        },
+        {
+          "id": "s2-alice",
+          "type": "rectangle",
+          "x": 540,
+          "y": 320,
+          "width": 240,
+          "height": 100,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "#a5d8ff",
+          "fillStyle": "solid"
+        },
+        {
+          "id": "s2-alice-label",
+          "type": "text",
+          "x": 580,
+          "y": 350,
+          "text": "alice",
+          "fontSize": 28,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        },
+        {
+          "id": "s2-arr2",
+          "type": "arrow",
+          "x": 780,
+          "y": 370,
+          "width": 100,
+          "height": 0,
+          "points": [
+            [0, 0],
+            [100, 0]
+          ],
+          "strokeColor": "#1e1e1e",
+          "endArrowhead": "arrow"
+        },
+        {
+          "id": "s2-bob",
+          "type": "rectangle",
+          "x": 900,
+          "y": 320,
+          "width": 240,
+          "height": 100,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "#ffd8a8",
+          "fillStyle": "solid"
+        },
+        {
+          "id": "s2-bob-label",
+          "type": "text",
+          "x": 950,
+          "y": 350,
+          "text": "bob",
+          "fontSize": 28,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        }
+      ]
+    },
+    {
+      "id": "scene-3",
+      "narration": "Done. Lookups are constant time on average — assuming a good hash function and a roomy table.",
+      "elements": [
+        {
+          "id": "s3-title",
+          "type": "text",
+          "x": 380,
+          "y": 280,
+          "text": "O(1) average lookup",
+          "fontSize": 64,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        },
+        {
+          "id": "s3-circle",
+          "type": "ellipse",
+          "x": 760,
+          "y": 480,
+          "width": 400,
+          "height": 200,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "#eebefa",
+          "fillStyle": "solid"
+        },
+        {
+          "id": "s3-circle-label",
+          "type": "text",
+          "x": 870,
+          "y": 555,
+          "text": "amortized",
+          "fontSize": 36,
+          "fontFamily": 1,
+          "strokeColor": "#1e1e1e"
+        }
+      ]
+    }
+  ]
+}

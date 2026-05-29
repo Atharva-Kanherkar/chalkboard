@@ -37,8 +37,8 @@ describe('parseSceneScript', () => {
   });
 
   it('throws on missing scenes', () => {
-    expect(() =>
-      parseSceneScript(JSON.stringify({ version: '1', meta: {}, scenes: [] })),
-    ).toThrow(/scenes/);
+    expect(() => parseSceneScript(JSON.stringify({ version: '1', meta: {}, scenes: [] }))).toThrow(
+      /scenes/,
+    );
   });
 });

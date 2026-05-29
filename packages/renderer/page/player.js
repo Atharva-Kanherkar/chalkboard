@@ -63,7 +63,8 @@
 
   function commonOpts(el, alpha) {
     const stroke = el.strokeColor || '#1e1e1e';
-    const fill = el.backgroundColor && el.backgroundColor !== 'transparent' ? el.backgroundColor : undefined;
+    const fill =
+      el.backgroundColor && el.backgroundColor !== 'transparent' ? el.backgroundColor : undefined;
     const opts = {
       stroke,
       strokeWidth: el.strokeWidth || 2,

@@ -34,8 +34,7 @@ function assertScript(x: unknown): asserts x is SceneScript {
   if (!x || typeof x !== 'object') throw new Error('SceneScript: not an object');
   const o = x as Record<string, unknown>;
   if (o['version'] !== '1') throw new Error(`SceneScript: bad version ${String(o['version'])}`);
-  if (!o['meta'] || typeof o['meta'] !== 'object')
-    throw new Error('SceneScript: missing meta');
+  if (!o['meta'] || typeof o['meta'] !== 'object') throw new Error('SceneScript: missing meta');
   if (!Array.isArray(o['scenes']) || o['scenes'].length === 0)
     throw new Error('SceneScript: missing or empty scenes');
 }

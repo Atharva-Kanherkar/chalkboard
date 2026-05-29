@@ -101,9 +101,7 @@ program
     };
     const { resolveLLMProvider } = await import('@chalkboard/llm');
     const provider = resolveLLMProvider(
-      flags.llm
-        ? buildLLMConfig({ ...(flags as unknown as CliFlags), llm: flags.llm })
-        : undefined,
+      flags.llm ? buildLLMConfig({ ...(flags as unknown as CliFlags), llm: flags.llm }) : undefined,
     );
     const script = await provider.generateScript({
       prompt,

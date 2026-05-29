@@ -11,9 +11,9 @@ describe('StubTTSProvider', () => {
     expect(String.fromCharCode(out.bytes[0]!, out.bytes[1]!, out.bytes[2]!, out.bytes[3]!)).toBe(
       'RIFF',
     );
-    expect(
-      String.fromCharCode(out.bytes[8]!, out.bytes[9]!, out.bytes[10]!, out.bytes[11]!),
-    ).toBe('WAVE');
+    expect(String.fromCharCode(out.bytes[8]!, out.bytes[9]!, out.bytes[10]!, out.bytes[11]!)).toBe(
+      'WAVE',
+    );
   });
 
   it('scales duration with text length', async () => {

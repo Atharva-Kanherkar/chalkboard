@@ -80,6 +80,31 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.19.19)
 
+  examples:
+    dependencies:
+      '@chalkboard/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@chalkboard/narration':
+        specifier: workspace:*
+        version: link:../packages/narration
+      '@chalkboard/renderer':
+        specifier: workspace:*
+        version: link:../packages/renderer
+      '@chalkboard/shared':
+        specifier: workspace:*
+        version: link:../packages/shared
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.19
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/core:
     dependencies:
       '@chalkboard/llm':
