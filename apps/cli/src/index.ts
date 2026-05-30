@@ -26,6 +26,7 @@ interface CliFlags {
   musicTrack?: string;
   images?: boolean;
   imageModel?: string;
+  selfCorrect?: string | boolean;
 }
 
 const program = new Command();
@@ -54,6 +55,10 @@ program
   .option('--music-track <path>', 'Custom background music file (defaults to bundled loop)')
   .option('--no-images', 'Disable image generation for image elements (on by default)')
   .option('--image-model <id>', 'Image model id (default gpt-image-1)')
+  .option(
+    '--self-correct [passes]',
+    'Vision-critique each scene and fix layout before render (needs OPENAI_API_KEY)',
+  )
   .option('-q, --quiet', 'Suppress progress output')
   .action(async (promptParts: string[], rawFlags: CliFlags) => {
     const prompt = promptParts.join(' ').trim();
@@ -76,6 +81,7 @@ program
       ...(flags.musicTrack ? { musicTrack: flags.musicTrack } : {}),
       ...(flags.images === false ? { images: false } : {}),
       ...(flags.imageModel ? { imageModel: flags.imageModel } : {}),
+      ...(flags.selfCorrect ? { selfCorrect: parseSelfCorrect(flags.selfCorrect) } : {}),
       ...(flags.llm ? { llm: buildLLMConfig(flags) } : {}),
       ...(flags.tts ? { tts: buildTTSConfig(flags) } : {}),
       onProgress: flags.quiet ? () => undefined : printProgress,
@@ -130,6 +136,13 @@ program.parseAsync().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+// `--self-correct` → true (1 pass); `--self-correct 2` → 2 passes.
+function parseSelfCorrect(value: string | boolean): boolean | number {
+  if (value === true) return true;
+  const n = Number.parseInt(String(value), 10);
+  return Number.isFinite(n) && n > 0 ? n : true;
+}
 
 function buildLLMConfig(flags: CliFlags): LLMProviderConfig {
   const kind = flags.llm!;

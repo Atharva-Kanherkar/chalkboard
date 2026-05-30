@@ -17,6 +17,7 @@ import { resolveTTSProvider } from '@chalkboard/narration';
 import { renderScript, muxFinal, probeAudioDuration } from '@chalkboard/renderer';
 import { repairScript } from '@chalkboard/whiteboard';
 import { generateSceneImages } from './images.js';
+import { selfCorrectScript } from './self-correct.js';
 
 export interface GenerateResult {
   outputPath: string;
@@ -44,7 +45,8 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
   // -------- 1b. deterministic layout repair ----------
   // Clamp overflowing elements, de-dupe stacked text, separate overlaps — so
   // every provider's output is corrected, not just well-prompted ones.
-  const { script, report } = repairScript(raw);
+  const { script: repaired, report } = repairScript(raw);
+  let script = repaired;
   const fixes = report.clamped + report.scaled + report.dedupedText + report.movedOverlaps;
   if (fixes > 0) {
     emit(onProgress, {
@@ -59,7 +61,27 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
     : await mkdtemp(join(tmpdir(), 'chalkboard-'));
 
   try {
-    // -------- 2b. image generation ----------
+    // -------- 2b. vision self-correction (opt-in) ----------
+    // Settle layout on placeholders first, so images are generated once at
+    // their final sizes and the vision model never has to echo back image data.
+    if (opts.selfCorrect) {
+      const iterations = typeof opts.selfCorrect === 'number' ? opts.selfCorrect : 1;
+      const corrected = await selfCorrectScript(script, {
+        workDir,
+        iterations,
+        onProgress: (msg) =>
+          emit(onProgress, { phase: 'render', message: `[self-correct] ${msg}` }),
+      });
+      script = corrected.script;
+      if (corrected.fixedScenes > 0) {
+        emit(onProgress, {
+          phase: 'render',
+          message: `[self-correct] fixed ${corrected.fixedScenes} scene(s) over ${corrected.passes} pass(es)`,
+        });
+      }
+    }
+
+    // -------- 2c. image generation ----------
     // Resolve any `image` element prompts into real imagery before render.
     if (opts.images !== false) {
       const img = await generateSceneImages(script, {

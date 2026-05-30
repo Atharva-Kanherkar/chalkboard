@@ -790,6 +790,24 @@
     await holdRepaint(remaining, () => paintScene(elements, elements.length, 0, byId));
   }
 
+  // Paint a scene's *final* drawn state instantly (no animation, no captions).
+  // Used by snapshot mode so the self-correct loop can screenshot what a scene
+  // actually looks like and have a vision model critique it.
+  function paintSceneFinal(i) {
+    const scene = cfg.script.scenes[i];
+    if (!scene) {
+      paintBg();
+      return false;
+    }
+    let elements = Array.isArray(scene.elements) ? scene.elements : [];
+    if (!hasRenderableContent(elements)) elements = synthesizeNarrationFallback(scene);
+    const byId = {};
+    for (const el of elements) if (el && el.id) byId[el.id] = el;
+    captionCues = [];
+    paintScene(elements, elements.length, 0, byId);
+    return true;
+  }
+
   async function run() {
     try {
       await waitFor(() => typeof window.rough !== 'undefined', 'roughjs', 8000);
@@ -803,6 +821,16 @@
     } catch (err) {
       console.warn('[chalkboard] image preload error:', err && err.message ? err.message : err);
     }
+
+    // Snapshot mode: expose a painter and stop. The host drives screenshots.
+    if (cfg.snapshot) {
+      window.chalkboardPaintScene = (i) => paintSceneFinal(i);
+      paintBg();
+      await sleep(100);
+      console.log('[chalkboard] READY');
+      return;
+    }
+
     paintBg();
     // Give the document a paint to make sure the canvas is on screen before
     // recording starts.

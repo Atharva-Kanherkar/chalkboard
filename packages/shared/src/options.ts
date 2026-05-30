@@ -28,6 +28,12 @@ export interface GenerateOptions {
   images?: boolean;
   /** Override the image model (default `gpt-image-1`). */
   imageModel?: string;
+  /**
+   * Vision self-correction: screenshot each scene and let a vision model fix
+   * layout problems before final render. `true` = 1 pass, or pass a count.
+   * Needs OPENAI_API_KEY. Default: off (deterministic repair always runs).
+   */
+  selfCorrect?: boolean | number;
 }
 
 export type LLMProviderConfig =

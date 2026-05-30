@@ -146,6 +146,71 @@ export async function renderScript(input: RenderInput): Promise<RenderOutput> {
   }
 }
 
+export interface ScreenshotInput {
+  script: SceneScript;
+  workDir: string;
+  onProgress?: (msg: string) => void;
+}
+
+export interface ScreenshotOutput {
+  /** One PNG path per scene, aligned by index. */
+  paths: string[];
+  canvas: { width: number; height: number };
+}
+
+/**
+ * Render each scene's final drawn state to a still PNG (no animation, no audio).
+ * Reuses the player in snapshot mode. Used by the self-correct loop, which feeds
+ * these stills to a vision model — far cheaper than re-recording the video.
+ */
+export async function screenshotScenes(input: ScreenshotInput): Promise<ScreenshotOutput> {
+  const { workDir } = input;
+  await mkdir(workDir, { recursive: true });
+  const script = await expandGraphvizInScript(input.script);
+  const canvas = canvasFor(script.meta.aspectRatio);
+  const pagePath = resolvePagePath();
+
+  const browser: Browser = await chromium.launch({
+    args: ['--disable-dev-shm-usage', '--no-sandbox'],
+  });
+  try {
+    const context = await browser.newContext({ viewport: canvas, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    page.on('console', (msg) => {
+      const text = msg.text();
+      if (text.startsWith('[chalkboard]')) input.onProgress?.(text);
+    });
+    const ready = waitForConsole(page, 'READY');
+    await page.addInitScript(
+      (payload) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__chalkboard__ = payload;
+      },
+      { script, timings: [], canvas, snapshot: true },
+    );
+    await page.goto(`file://${pagePath}`, { waitUntil: 'load' });
+    await ready;
+
+    const paths: string[] = [];
+    for (let i = 0; i < script.scenes.length; i++) {
+      await page.evaluate(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (idx) => (window as any).chalkboardPaintScene(idx),
+        i,
+      );
+      await page.waitForTimeout(120); // let RoughJS + images paint
+      const out = join(workDir, `scene-${i}.snapshot.png`);
+      await page.screenshot({ path: out });
+      paths.push(out);
+    }
+    await page.close();
+    await context.close();
+    return { paths, canvas };
+  } finally {
+    await browser.close();
+  }
+}
+
 function canvasFor(ar: SceneScript['meta']['aspectRatio']): { width: number; height: number } {
   if (ar === '9:16') return { width: 1080, height: 1920 };
   if (ar === '1:1') return { width: 1080, height: 1080 };

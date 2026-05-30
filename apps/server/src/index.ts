@@ -44,6 +44,10 @@ app.post('/generate', async (c) => {
   const subtitles = body['subtitles'] === false ? false : undefined;
   const music = body['music'] === false ? false : undefined;
   const images = body['images'] === false ? false : undefined;
+  const selfCorrect =
+    typeof body['selfCorrect'] === 'number' || body['selfCorrect'] === true
+      ? (body['selfCorrect'] as number | true)
+      : undefined;
 
   const job = jobs.create();
   // Fire and forget; the worker updates job state in-place.
@@ -57,6 +61,7 @@ app.post('/generate', async (c) => {
     ...(subtitles === false ? { subtitles: false } : {}),
     ...(music === false ? { music: false } : {}),
     ...(images === false ? { images: false } : {}),
+    ...(selfCorrect ? { selfCorrect } : {}),
   }).catch((err) => {
     jobs.fail(job.id, err instanceof Error ? err.message : String(err));
   });

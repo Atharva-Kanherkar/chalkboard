@@ -111,6 +111,20 @@ is cached per prompt and capped per video. Disable with `--no-images` /
 `"images": false` (image elements then render as neutral placeholders). Override
 the model with `--image-model <id>`.
 
+### Self-correcting render
+
+Because rendering isn't live, chalkboard can look at what it drew and fix it
+before finalizing. Two layers:
+
+1. **Deterministic repair** (always on) — clamps overflow, de-dupes stacked
+   text, separates overlaps. No API calls.
+2. **Vision critique** (opt-in: `--self-correct [passes]` / `"selfCorrect": true|N`)
+   — screenshots each scene's final state, sends the still to a vision model
+   (`gpt-4o` by default, `OPENAI_VISION_MODEL` to override), and applies the
+   corrected elements it returns. Catches what geometry can't: unreadable
+   contrast, text over a dark shape, awkward composition. Bounded passes; needs
+   `OPENAI_API_KEY`.
+
 ## Usage
 
 ### CLI
