@@ -2,21 +2,41 @@
 
 > Open-source whiteboard-style explainer videos. Prompt → mp4.
 
-`chalkboard` turns a prompt like _"explain hash tables"_ into a short
-whiteboard-style explainer video — narration, hand-drawn diagrams, multiple
-scenes, downloaded as an mp4. It's designed for programming/learning content,
-runs entirely on your own machine, and falls back to free local providers
-(Ollama + Piper TTS) so the marginal cost per video can be zero.
+`chalkboard` turns a prompt like _"explain how the universe is aging"_ into a
+narrated, hand-drawn explainer video — diagrams, real AI-generated imagery,
+subtitles, and music — exported as an mp4. It runs entirely on your own machine
+and falls back to free local providers (Ollama + Piper TTS), so the marginal
+cost per video can be zero. MIT-licensed: yours to fork, embed, and bill for.
 
-It's a self-hostable counterpart to closed offerings like Simi/Lamina Labs —
-fewer voices, less polish, but yours to fork, embed, and bill for.
+<p align="center">
+  <video src="https://github.com/Atharva-Kanherkar/chalkboard/releases/download/v0.1.0/chalkboard-demo.mp4" controls muted width="780"></video>
+</p>
+
+> ▶️ The clip above — _"how the universe is aging"_ — was generated end to end
+> from that single prompt.
+> [Watch / download it here.](https://github.com/Atharva-Kanherkar/chalkboard/releases/download/v0.1.0/chalkboard-demo.mp4)
+
+## Features
+
+- **Any provider** — Anthropic, OpenAI, or fully local Ollama for the script; Piper, OpenAI, or ElevenLabs for narration.
+- **Hand-drawn diagrams** — a RoughJS sketch aesthetic, with Graphviz auto-layout for graphs, trees, linked lists, and state machines.
+- **Real images** — `image` elements are generated with `gpt-image-1` for visual and science topics (stars, cells, maps), not just boxes and arrows.
+- **Vector art** — built-in SVG motifs and custom inline SVG, at zero API cost.
+- **Subtitles** — burned into every frame, with no player or libass dependency.
+- **Background music** — a CC0 bed, sidechain-ducked under the narration so the voice stays clear.
+- **Self-correcting** — a deterministic layout pass plus an optional vision-model critique that fixes overflow, overlap, and contrast before the final render.
+- **$0 local** — Ollama + Piper means zero marginal cost per video; self-host the whole pipeline.
+
+## How it works
 
 ```
-prompt                 → "explain hash tables"
-  llm (any provider)   → SceneScript JSON
-  tts (any provider)   → audio per scene
-  renderer (Playwright)→ silent webm
-  ffmpeg               → final mp4
+prompt                  → "explain how the universe is aging"
+  llm (any provider)    → SceneScript JSON
+  layout repair         → clamp / de-overlap / (optional) vision fix
+  image gen             → gpt-image-1 for image elements
+  tts (any provider)    → narration per scene
+  renderer (Playwright) → canvas video + burned-in captions
+  ffmpeg                → narration + ducked music → final mp4
 ```
 
 ## Quickstart
@@ -28,7 +48,7 @@ prompt                 → "explain hash tables"
 #   - ffmpeg + ffprobe on PATH
 #   - (optional) piper for local TTS
 
-git clone https://github.com/<you>/chalkboard
+git clone https://github.com/Atharva-Kanherkar/chalkboard
 cd chalkboard
 pnpm install
 pnpm --filter @chalkboard/renderer exec playwright install chromium
@@ -136,11 +156,7 @@ art at **zero API cost**:
 - `{ type: "svg", svg: "<svg>…</svg>", … }` — any custom inline SVG, drawn
   contained (never cropped) in the box.
 
-> The original ask mentioned **Remotion** for animation. Remotion is
-> source-available with a paid company license, which conflicts with this MIT
-> "fork, embed, and bill for" repo, so it isn't used. Static SVG/motifs ship
-> here; animated vector playback (e.g. MIT-licensed Lottie, blitted per-frame
-> into the canvas recording) is a sensible follow-up tracked on #12.
+Both motifs and inline SVG are pure-vector and add nothing to your API bill.
 
 ## Usage
 
@@ -241,9 +257,10 @@ The contract between LLM and renderer is a typed JSON document:
 }
 ```
 
-Allowed element types: `rectangle`, `ellipse`, `diamond`, `line`, `arrow`,
-`text`. Elements appear progressively (opacity ramp, staggered) while the
-narration plays; visual timing stretches to match audio.
+Element types: `rectangle`, `ellipse`, `diamond`, `line`, `arrow`, `text`,
+`code-block`, `step-marker`, `group`, `highlight`, `graphviz`, `image`, `svg`.
+Elements appear progressively (opacity ramp, staggered) while the narration
+plays; visual timing stretches to match audio.
 
 ## Smoke tests
 
@@ -258,36 +275,19 @@ pnpm --filter @chalkboard/renderer smoke
 pnpm --filter @chalkboard/core smoke
 ```
 
-## Costs (approximate)
+## Cost per video
 
-| Setup                          | Per-video cost |
-| ------------------------------ | -------------- |
-| Ollama (local) + Piper (local) | $0             |
-| Claude Haiku + Piper           | ~$0.0002       |
-| Claude Haiku + OpenAI TTS      | ~$0.002        |
-| Claude Sonnet + ElevenLabs     | $0.05–0.20     |
+| Setup                              | Cost per video |
+| ---------------------------------- | -------------- |
+| Ollama + Piper (fully local)       | $0             |
+| Claude Haiku + Piper               | ~$0.0002       |
+| Claude Haiku + OpenAI TTS          | ~$0.002        |
+| Cloud LLM + TTS + generated images | ~$0.10–2.00    |
 
-The 3–5 min wall-clock per video on a modest VPS is dominated by Playwright
-recording the canvas in real time. There is no way to make it 20 seconds with
-this architecture; we trade speed for portability and the absence of a render
-farm.
-
-## How this compares
-
-|                     | Simi (Lamina Labs)   | chalkboard                                  |
-| ------------------- | -------------------- | ------------------------------------------- |
-| License             | closed               | MIT                                         |
-| Self-host           | no                   | yes                                         |
-| Cost per video      | paid                 | $0 with local stack                         |
-| Speed (3 min video) | ~20 sec              | ~3 min                                      |
-| Languages           | 70+                  | depends on TTS (Piper: ~50; OpenAI: 50+)    |
-| Best for            | marketing explainers | programming/learning content, OSS embedding |
-
-## Status
-
-Early. The pipeline works end-to-end and is testable in CI via the stub
-providers. Real-world quality is gated on prompt tuning and asset vocabulary,
-not on the rendering plumbing — see `packages/llm/src/prompt.ts`.
+Generated images dominate the cloud cost — cap or disable them (`--no-images`)
+to stay in fractions of a cent. Rendering is real-time: a 90-second video takes
+a few minutes of wall-clock as Playwright records the canvas, in exchange for
+portability and no render farm.
 
 ## License
 
