@@ -64,6 +64,8 @@ Font sizes (in px): titles 48–64, headings 32–40, body 22–28, labels 18–
 
 ### Spacing
 - Never overlap two shapes. Leave at least 24px between elements.
+- Never place two text elements at the same x,y — each text occupies vertical space (≈ fontSize × 1.25 per line). Stack them with real gaps; never stamp text on top of other text.
+- Never emit the same text twice in one scene.
 - Put 80px between major scene regions.
 - A 4-step horizontal flow fits nicely as boxes of width 280px with 40px arrows between them, on a y-axis around 480.
 

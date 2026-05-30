@@ -15,6 +15,7 @@ import type { GenerateOptions, ProgressEvent, SceneScript } from '@chalkboard/sh
 import { resolveLLMProvider } from '@chalkboard/llm';
 import { resolveTTSProvider } from '@chalkboard/narration';
 import { renderScript, muxFinal, probeAudioDuration } from '@chalkboard/renderer';
+import { repairScript } from '@chalkboard/whiteboard';
 
 export interface GenerateResult {
   outputPath: string;
@@ -33,11 +34,23 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
 
   // -------- 1. script ----------
   emit(onProgress, { phase: 'script', message: `generating script via ${llm.name}` });
-  const script = await llm.generateScript({ prompt: opts.prompt, language, aspectRatio });
+  const raw = await llm.generateScript({ prompt: opts.prompt, language, aspectRatio });
   emit(onProgress, {
     phase: 'script',
-    message: `script ready (${script.scenes.length} scenes)`,
+    message: `script ready (${raw.scenes.length} scenes)`,
   });
+
+  // -------- 1b. deterministic layout repair ----------
+  // Clamp overflowing elements, de-dupe stacked text, separate overlaps — so
+  // every provider's output is corrected, not just well-prompted ones.
+  const { script, report } = repairScript(raw);
+  const fixes = report.clamped + report.scaled + report.dedupedText + report.movedOverlaps;
+  if (fixes > 0) {
+    emit(onProgress, {
+      phase: 'script',
+      message: `layout repaired (clamp ${report.clamped}, scale ${report.scaled}, dedupe ${report.dedupedText}, overlap ${report.movedOverlaps})`,
+    });
+  }
 
   // -------- 2. work dir ----------
   const workDir = opts.workDir

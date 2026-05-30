@@ -406,6 +406,26 @@
     return null;
   }
 
+  // Break a single token that is wider than maxWidth into character chunks that
+  // each fit. Without this, a long word (URL, identifier, hashed key) bleeds
+  // past the box edge — the #1 horizontal text-overflow bug.
+  function breakWord(word, maxWidth) {
+    if (ctx.measureText(word).width <= maxWidth) return [word];
+    const chunks = [];
+    let current = '';
+    for (const ch of String(word)) {
+      const test = current + ch;
+      if (current && ctx.measureText(test).width > maxWidth) {
+        chunks.push(current);
+        current = ch;
+      } else {
+        current = test;
+      }
+    }
+    if (current) chunks.push(current);
+    return chunks;
+  }
+
   // Word-wrap a single logical line to fit within `maxWidth` px on canvas
   // context `ctx`. Hard newlines are honored beforehand (caller splits).
   function wrapLine(text, maxWidth) {
@@ -413,18 +433,28 @@
     const words = String(text).split(/\s+/).filter(Boolean);
     if (words.length === 0) return [''];
     const lines = [];
-    let current = words[0];
-    for (let i = 1; i < words.length; i++) {
-      const w = words[i];
-      const test = current + ' ' + w;
-      if (ctx.measureText(test).width <= maxWidth) {
-        current = test;
-      } else {
-        lines.push(current);
-        current = w;
+    let current = '';
+    for (const word of words) {
+      // A word too wide on its own is split into hard chunks first.
+      const pieces = breakWord(word, maxWidth);
+      for (let k = 0; k < pieces.length; k++) {
+        const piece = pieces[k];
+        if (!current) {
+          current = piece;
+          continue;
+        }
+        const test = current + ' ' + piece;
+        // Pieces from a broken word continue on their own lines.
+        const sameWord = k > 0;
+        if (!sameWord && ctx.measureText(test).width <= maxWidth) {
+          current = test;
+        } else {
+          lines.push(current);
+          current = piece;
+        }
       }
     }
-    lines.push(current);
+    if (current) lines.push(current);
     return lines;
   }
 

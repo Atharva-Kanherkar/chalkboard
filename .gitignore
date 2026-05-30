@@ -32,3 +32,6 @@ coverage/
 /piper-models/
 *.onnx
 *.onnx.json
+
+# server job artifacts
+apps/*/out/
