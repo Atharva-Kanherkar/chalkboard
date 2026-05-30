@@ -1,5 +1,13 @@
 # chalkboard
 
+<p align="center">
+  <a href="https://github.com/Atharva-Kanherkar/chalkboard/actions/workflows/ci.yml"><img src="https://github.com/Atharva-Kanherkar/chalkboard/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://github.com/Atharva-Kanherkar/chalkboard/releases"><img src="https://img.shields.io/github/v/release/Atharva-Kanherkar/chalkboard?label=release" alt="Latest release"></a>
+  <img src="https://img.shields.io/badge/node-%E2%89%A520-43853d.svg" alt="Node >= 20">
+  <img src="https://img.shields.io/badge/TypeScript-strict-3178c6.svg" alt="TypeScript">
+</p>
+
 > Open-source whiteboard-style explainer videos. Prompt → mp4.
 
 `chalkboard` turns a prompt like _"explain how the universe is aging"_ into a
@@ -294,6 +302,13 @@ Generated images dominate the cloud cost — cap or disable them (`--no-images`)
 to stay in fractions of a cent. Rendering is real-time: a 90-second video takes
 a few minutes of wall-clock as Playwright records the canvas, in exchange for
 portability and no render farm.
+
+## Roadmap
+
+- **Faster rendering** — offscreen, frame-by-frame capture to cut a render from minutes to seconds (today it records the canvas in real time).
+- **Animated vector art** — MIT-licensed Lottie playback composited into the render, alongside the static SVG/motifs.
+- **Document ingestion** — turn a PDF or Markdown doc into a video, not just a prompt.
+- **More voices & languages** — broaden the local (Piper) voice library.
 
 ## License
 
