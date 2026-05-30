@@ -14,10 +14,15 @@ import OpenAI from 'openai';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ExcalidrawElementLike, SceneScript } from '@chalkboard/shared';
+import { addUsage, emptyUsage, estimateImageCostUsd, type TokenUsage } from './cost.js';
+
+export type ImageQuality = 'low' | 'medium' | 'high' | 'auto';
 
 export interface GenerateImagesOptions {
   apiKey?: string;
   model?: string;
+  /** gpt-image-1 quality. Default 'medium' — ~4x cheaper than 'high'/'auto'. */
+  quality?: ImageQuality;
   workDir: string;
   /** Max images generated per video (cost guard). Default 8. */
   max?: number;
@@ -29,6 +34,10 @@ export interface GenerateImagesResult {
   generated: number;
   /** True if image elements existed but no key was available to render them. */
   skippedForNoKey: boolean;
+  /** Accumulated token usage across image calls. */
+  usage: TokenUsage;
+  /** Estimated USD spent on image generation. */
+  estCostUsd: number;
 }
 
 type ImageSize = '1024x1024' | '1536x1024' | '1024x1536';
@@ -65,7 +74,7 @@ export async function generateSceneImages(
   }
 
   if (targets.length === 0) {
-    return { script, generated: 0, skippedForNoKey: false };
+    return { script, generated: 0, skippedForNoKey: false, usage: emptyUsage(), estCostUsd: 0 };
   }
 
   const apiKey = opts.apiKey ?? process.env['OPENAI_API_KEY'];
@@ -73,16 +82,18 @@ export async function generateSceneImages(
     opts.onProgress?.(
       `${targets.length} image element(s) but no OPENAI_API_KEY — drawing placeholders`,
     );
-    return { script, generated: 0, skippedForNoKey: true };
+    return { script, generated: 0, skippedForNoKey: true, usage: emptyUsage(), estCostUsd: 0 };
   }
 
   const client = new OpenAI({ apiKey });
   const model = opts.model ?? process.env['OPENAI_IMAGE_MODEL'] ?? 'gpt-image-1';
+  const quality: ImageQuality = opts.quality ?? 'medium';
   const max = opts.max ?? 8;
 
   // Cache by prompt so repeated imagery in a video costs one call.
   const cache = new Map<string, string>();
   let generated = 0;
+  let usage: TokenUsage = emptyUsage();
 
   for (const el of targets) {
     if (generated >= max) {
@@ -98,13 +109,14 @@ export async function generateSceneImages(
 
     const size = sizeFor(el);
     opts.onProgress?.(
-      `generating image ${generated + 1}/${Math.min(targets.length, max)} (${size})`,
+      `generating image ${generated + 1}/${Math.min(targets.length, max)} (${size}, ${quality})`,
     );
     try {
       const res = await client.images.generate({
         model,
         prompt: stylePrompt(prompt),
         size,
+        quality,
         n: 1,
       });
       const b64 = res.data?.[0]?.b64_json;
@@ -113,6 +125,14 @@ export async function generateSceneImages(
       el['src'] = dataUrl;
       cache.set(prompt, dataUrl);
       generated += 1;
+      // gpt-image-1 returns token usage; accumulate for the cost estimate.
+      const u = res.usage as { input_tokens?: number; output_tokens?: number } | undefined;
+      if (u) {
+        usage = addUsage(usage, {
+          inputTokens: u.input_tokens ?? 0,
+          outputTokens: u.output_tokens ?? 0,
+        });
+      }
       // Persist for debugging when the work dir is kept.
       await writeFile(
         join(opts.workDir, `image-${generated}.png`),
@@ -125,7 +145,13 @@ export async function generateSceneImages(
     }
   }
 
-  return { script, generated, skippedForNoKey: false };
+  return {
+    script,
+    generated,
+    skippedForNoKey: false,
+    usage,
+    estCostUsd: estimateImageCostUsd(usage),
+  };
 }
 
 // Nudge the model toward clean, on-topic illustration that composes well on a

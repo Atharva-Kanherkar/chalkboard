@@ -87,12 +87,13 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       const img = await generateSceneImages(script, {
         workDir,
         ...(opts.imageModel ? { model: opts.imageModel } : {}),
+        ...(opts.imageQuality ? { quality: opts.imageQuality } : {}),
         onProgress: (msg) => emit(onProgress, { phase: 'render', message: `[image] ${msg}` }),
       });
       if (img.generated > 0) {
         emit(onProgress, {
           phase: 'render',
-          message: `[image] generated ${img.generated} image(s)`,
+          message: `[image] generated ${img.generated} image(s) — ~$${img.estCostUsd.toFixed(4)} (est.)`,
         });
       }
     }

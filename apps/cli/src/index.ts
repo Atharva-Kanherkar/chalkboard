@@ -26,6 +26,7 @@ interface CliFlags {
   musicTrack?: string;
   images?: boolean;
   imageModel?: string;
+  imageQuality?: 'low' | 'medium' | 'high' | 'auto';
   selfCorrect?: string | boolean;
 }
 
@@ -55,6 +56,7 @@ program
   .option('--music-track <path>', 'Custom background music file (defaults to bundled loop)')
   .option('--no-images', 'Disable image generation for image elements (on by default)')
   .option('--image-model <id>', 'Image model id (default gpt-image-1)')
+  .option('--image-quality <q>', 'Image quality: low | medium | high | auto (default medium)')
   .option(
     '--self-correct [passes]',
     'Vision-critique each scene and fix layout before render (needs OPENAI_API_KEY)',
@@ -81,6 +83,7 @@ program
       ...(flags.musicTrack ? { musicTrack: flags.musicTrack } : {}),
       ...(flags.images === false ? { images: false } : {}),
       ...(flags.imageModel ? { imageModel: flags.imageModel } : {}),
+      ...(flags.imageQuality ? { imageQuality: flags.imageQuality } : {}),
       ...(flags.selfCorrect ? { selfCorrect: parseSelfCorrect(flags.selfCorrect) } : {}),
       ...(flags.llm ? { llm: buildLLMConfig(flags) } : {}),
       ...(flags.tts ? { tts: buildTTSConfig(flags) } : {}),

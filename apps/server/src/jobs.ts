@@ -84,6 +84,7 @@ export interface RunJobInput {
   subtitles?: boolean;
   music?: boolean;
   images?: boolean;
+  imageQuality?: 'low' | 'medium' | 'high' | 'auto';
   selfCorrect?: boolean | number;
 }
 
@@ -108,6 +109,7 @@ export async function runJob(
     ...(input.subtitles === false ? { subtitles: false } : {}),
     ...(input.music === false ? { music: false } : {}),
     ...(input.images === false ? { images: false } : {}),
+    ...(input.imageQuality ? { imageQuality: input.imageQuality } : {}),
     ...(input.selfCorrect ? { selfCorrect: input.selfCorrect } : {}),
     onProgress: (e) => store.pushProgress(job.id, e),
   };

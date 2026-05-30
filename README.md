@@ -133,6 +133,10 @@ is cached per prompt and capped per video. Disable with `--no-images` /
 `"images": false` (image elements then render as neutral placeholders). Override
 the model with `--image-model <id>`.
 
+Control cost with `--image-quality low|medium|high|auto` (default **`medium`** —
+roughly 4× cheaper than `high`/`auto`). Each run reports its estimated image
+spend from the API's token usage, e.g. `[image] generated 7 image(s) — ~$0.42 (est.)`.
+
 ### Self-correcting render
 
 Because rendering isn't live, chalkboard can look at what it drew and fix it

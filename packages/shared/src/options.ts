@@ -28,6 +28,8 @@ export interface GenerateOptions {
   images?: boolean;
   /** Override the image model (default `gpt-image-1`). */
   imageModel?: string;
+  /** Image quality: 'low' | 'medium' | 'high' | 'auto'. Default 'medium' (cheaper). */
+  imageQuality?: 'low' | 'medium' | 'high' | 'auto';
   /**
    * Vision self-correction: screenshot each scene and let a vision model fix
    * layout problems before final render. `true` = 1 pass, or pass a count.

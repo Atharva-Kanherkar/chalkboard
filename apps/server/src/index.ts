@@ -44,6 +44,13 @@ app.post('/generate', async (c) => {
   const subtitles = body['subtitles'] === false ? false : undefined;
   const music = body['music'] === false ? false : undefined;
   const images = body['images'] === false ? false : undefined;
+  const imageQuality =
+    body['imageQuality'] === 'low' ||
+    body['imageQuality'] === 'medium' ||
+    body['imageQuality'] === 'high' ||
+    body['imageQuality'] === 'auto'
+      ? body['imageQuality']
+      : undefined;
   const selfCorrect =
     typeof body['selfCorrect'] === 'number' || body['selfCorrect'] === true
       ? (body['selfCorrect'] as number | true)
@@ -61,6 +68,7 @@ app.post('/generate', async (c) => {
     ...(subtitles === false ? { subtitles: false } : {}),
     ...(music === false ? { music: false } : {}),
     ...(images === false ? { images: false } : {}),
+    ...(imageQuality ? { imageQuality } : {}),
     ...(selfCorrect ? { selfCorrect } : {}),
   }).catch((err) => {
     jobs.fail(job.id, err instanceof Error ? err.message : String(err));
