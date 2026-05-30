@@ -232,6 +232,23 @@ curl http://localhost:4140/jobs/$ID/video -o out.mp4
 Configure: `STORAGE_DIR` (default `./out`), `PORT` (default 4140).
 API keys are read from the server's env; the web UI never sees them.
 
+### Studio (Next.js web app)
+
+`apps/studio` is the polished product frontend: a chat-style workspace where you
+type a topic, watch the pipeline run live (script → narration → render → mux),
+and get the mp4 inline with a download. Toggle aspect ratio, subtitles, music,
+images, self-correct, or **⚡ Demo** (stub providers — instant, no API cost).
+
+```bash
+pnpm --filter @chalkboard/server start            # backend on :4140
+pnpm --filter @chalkboard/studio dev              # studio on :3000
+```
+
+Open <http://localhost:3000>. The studio proxies `/api/*` to the server
+(`CHALKBOARD_API` env overrides the target), so it deploys independently of the
+backend. The sidebar lanes (Explainer live; Reels and Repurpose on the roadmap)
+are where the product grows next.
+
 ### SceneScript
 
 The contract between LLM and renderer is a typed JSON document:

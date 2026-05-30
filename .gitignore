@@ -36,3 +36,6 @@ coverage/
 
 # server job artifacts
 apps/*/out/
+
+# next.js
+next-env.d.ts
