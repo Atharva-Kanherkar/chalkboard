@@ -728,12 +728,15 @@
 
     const W = canvas.width;
     const H = canvas.height;
-    const fontSize = Math.round(H * 0.04);
+    const portrait = H > W;
+    // Vertical reels: slightly larger captions, lifted clear of the TikTok/IG
+    // bottom UI (caption bar, buttons) which covers the lowest ~15%.
+    const fontSize = Math.round((portrait ? W : H) * 0.045);
     const font = `600 ${fontSize}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
     const maxWidth = W * 0.84;
     const lines = captionWrap(cue.text, maxWidth, font).slice(0, 3);
     const lineHeight = fontSize * 1.28;
-    const marginBottom = Math.round(H * 0.06);
+    const marginBottom = Math.round(H * (portrait ? 0.16 : 0.06));
 
     ctx.save();
     ctx.font = font;

@@ -3,7 +3,7 @@
 // but any installed model works.
 
 import { parseSceneScript } from './parse.js';
-import { SYSTEM_PROMPT, userPromptFor } from './prompt.js';
+import { systemPromptFor, userPromptFor } from './prompt.js';
 import type { LLMProvider, ScriptGenerationInput } from './provider.js';
 
 export interface OllamaProviderOptions {
@@ -31,7 +31,7 @@ export class OllamaProvider implements LLMProvider {
         stream: false,
         format: 'json',
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: systemPromptFor(input.format) },
           { role: 'user', content: userPromptFor(input) },
         ],
       }),

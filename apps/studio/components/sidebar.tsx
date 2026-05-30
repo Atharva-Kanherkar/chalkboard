@@ -1,11 +1,11 @@
 'use client';
 
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, StudioMode } from '@/lib/types';
 import { Logo } from './icons';
 
-const MODES = [
+const MODES: { key: StudioMode | 'repurpose'; label: string; hint: string; live: boolean }[] = [
   { key: 'explainer', label: 'Explainer', hint: 'Concept → video', live: true },
-  { key: 'reels', label: 'Reels', hint: 'Faceless shorts', live: false },
+  { key: 'reels', label: 'Reels', hint: 'Vertical shorts', live: true },
   { key: 'repurpose', label: 'Repurpose', hint: 'Doc → series', live: false },
 ];
 
@@ -16,10 +16,14 @@ function statusDot(m: ChatMessage) {
 }
 
 export function Sidebar({
+  mode,
+  onMode,
   history,
   onNew,
   onSelect,
 }: {
+  mode: StudioMode;
+  onMode: (m: StudioMode) => void;
   history: ChatMessage[];
   onNew: () => void;
   onSelect: (id: string) => void;
@@ -49,31 +53,41 @@ export function Sidebar({
         <div className="px-1 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--muted)]/60">
           Studios
         </div>
-        {MODES.map((m) => (
-          <div
-            key={m.key}
-            className={
-              'flex items-center justify-between rounded-lg px-3 py-2 text-sm ' +
-              (m.live
-                ? 'bg-[var(--panel-2)] text-[var(--text)] ring-1 ring-[var(--border)]'
-                : 'cursor-default text-[var(--muted)]/70')
-            }
-            title={m.live ? undefined : 'On the roadmap'}
-          >
-            <span className="flex flex-col">
-              <span className="font-medium">{m.label}</span>
-              <span className="text-[11px] text-[var(--muted)]/70">{m.hint}</span>
-            </span>
-            {!m.live && (
-              <span className="rounded-full bg-[var(--panel-2)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] ring-1 ring-[var(--border)]">
-                soon
+        {MODES.map((m) => {
+          const active = m.live && m.key === mode;
+          return (
+            <button
+              key={m.key}
+              type="button"
+              disabled={!m.live}
+              onClick={() => m.live && onMode(m.key as StudioMode)}
+              title={m.live ? undefined : 'On the roadmap'}
+              className={
+                'mb-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ' +
+                (active
+                  ? 'bg-[var(--panel-2)] text-[var(--text)] ring-1 ring-violet-400/40'
+                  : m.live
+                    ? 'text-[var(--muted)] hover:bg-[var(--panel-2)] hover:text-[var(--text)]'
+                    : 'cursor-default text-[var(--muted)]/60')
+              }
+            >
+              <span className="flex flex-col">
+                <span className="font-medium">{m.label}</span>
+                <span className="text-[11px] text-[var(--muted)]/70">{m.hint}</span>
               </span>
-            )}
-          </div>
-        ))}
+              {!m.live ? (
+                <span className="rounded-full bg-[var(--panel-2)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] ring-1 ring-[var(--border)]">
+                  soon
+                </span>
+              ) : active ? (
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+              ) : null}
+            </button>
+          );
+        })}
       </nav>
 
-      <div className="mt-5 flex min-h-0 flex-1 flex-col px-3">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col px-3">
         <div className="px-1 pb-1.5 text-[11px] font-medium uppercase tracking-wide text-[var(--muted)]/60">
           History
         </div>

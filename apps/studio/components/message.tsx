@@ -54,7 +54,7 @@ export function MessageView({ msg }: { msg: ChatMessage }) {
         ) : done ? (
           <div className="glass overflow-hidden rounded-2xl">
             <video
-              className="block w-full bg-black"
+              className="mx-auto block max-h-[72vh] max-w-full bg-black"
               src={videoUrl(msg.videoId!)}
               controls
               playsInline

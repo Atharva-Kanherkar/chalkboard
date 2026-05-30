@@ -246,8 +246,21 @@ pnpm --filter @chalkboard/studio dev              # studio on :3000
 
 Open <http://localhost:3000>. The studio proxies `/api/*` to the server
 (`CHALKBOARD_API` env overrides the target), so it deploys independently of the
-backend. The sidebar lanes (Explainer live; Reels and Repurpose on the roadmap)
-are where the product grows next.
+backend. Two lanes are live — **Explainer** (16:9) and **Reels** (vertical 9:16
+shorts); Repurpose is on the roadmap.
+
+### Reels (vertical shorts)
+
+The Reels lane (or `--short` on the CLI) switches to a hook-first vertical
+preset: 9:16, 3-5 tight scenes, one punchy sentence each, large captions lifted
+clear of the platform UI, royalty-free music. Music is intentionally
+royalty-free — Instagram/TikTok's trending songs are licensed for in-app use
+only, so add them after posting rather than baking copyrighted audio into the
+export.
+
+```bash
+chalkboard generate "3 wild facts about black holes" --short -o reel.mp4
+```
 
 ### SceneScript
 

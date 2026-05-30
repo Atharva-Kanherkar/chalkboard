@@ -36,8 +36,16 @@ app.post('/generate', async (c) => {
   if (!prompt) return c.json({ error: 'prompt is required' }, 400);
 
   const language = typeof body['language'] === 'string' ? body['language'] : 'en';
+  const format = body['format'] === 'short' ? 'short' : undefined;
+  // Shorts default to vertical; explicit aspectRatio always wins.
   const aspectRatio =
-    body['aspectRatio'] === '9:16' || body['aspectRatio'] === '1:1' ? body['aspectRatio'] : '16:9';
+    body['aspectRatio'] === '9:16' ||
+    body['aspectRatio'] === '1:1' ||
+    body['aspectRatio'] === '16:9'
+      ? body['aspectRatio']
+      : format === 'short'
+        ? '9:16'
+        : '16:9';
   const voice = typeof body['voice'] === 'string' ? body['voice'] : undefined;
   const llm = parseLLMProvider(body['llm']);
   const tts = parseTTSProvider(body['tts']);
@@ -62,6 +70,7 @@ app.post('/generate', async (c) => {
     prompt,
     language,
     aspectRatio,
+    ...(format ? { format } : {}),
     ...(voice ? { voice } : {}),
     ...(llm ? { llm } : {}),
     ...(tts ? { tts } : {}),

@@ -156,11 +156,45 @@ Pastel palette (use these for fills): "#a5d8ff" blue, "#ffec99" yellow, "#b2f2bb
 
 Now produce the JSON.`;
 
+// Appended to the base prompt for vertical short-form "reels". Overrides the
+// canvas size, pacing, runtime, and layout guidance for a 9:16 phone screen.
+export const SHORT_FORM_ADDENDUM = `
+
+## SHORT-FORM OVERRIDE (this is a vertical Reel / TikTok / Short)
+
+You are now writing a SHORT, not a lecture. Override the rules above where they conflict:
+
+- Canvas is VERTICAL 1080x1920. Keep everything within (80,120) to (1000,1740). Lay elements out top-to-bottom, not side-by-side.
+- Total runtime 20-40 seconds. 3-5 very short scenes. This is the hard cap.
+- Scene 1 is a HOOK: one line that creates curiosity or stakes in the first 2 seconds. "Here's why X is weird." "Most people get X wrong." "X is secretly Y." Never open with a definition.
+- Narration: ONE short punchy sentence per scene. ~12-22 words. Total ~60-100 words across the whole short. Spoken, casual, high-energy.
+- Each scene = ONE strong visual: a big title plus a single image, diagram, or 2-3 large shapes. Do NOT cram. Empty space is fine on a phone.
+- Fonts are LARGE: title 76-104, body/labels 40-56. A phone screen is small; small text is unreadable.
+- Title near the top (y ~200-340). Key visual centered (y ~620-1200).
+- Prefer one generated 'image' or a clean 'svg' motif per scene over many tiny hand-drawn parts.
+- End on a punchy takeaway or a question that invites a reply/follow.
+
+Produce the vertical short now.`;
+
+/** System prompt for the requested format. */
+export function systemPromptFor(format?: 'explainer' | 'short'): string {
+  return format === 'short' ? SYSTEM_PROMPT + SHORT_FORM_ADDENDUM : SYSTEM_PROMPT;
+}
+
 export function userPromptFor(input: {
   prompt: string;
   language: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
+  format?: 'explainer' | 'short';
 }): string {
+  if (input.format === 'short') {
+    return `Topic: ${input.prompt}
+
+Language for narration: ${input.language}
+Aspect ratio: ${input.aspectRatio} (vertical short)
+
+Produce the vertical SHORT-FORM SceneScript JSON now. Remember: scene 1 is a 2-second HOOK, 3-5 tiny scenes, one short punchy sentence each, large fonts, one strong visual per scene, top-to-bottom layout. Use an 'image' or 'svg' for the key visual where it helps.`;
+  }
   return `Topic: ${input.prompt}
 
 Language for narration: ${input.language}

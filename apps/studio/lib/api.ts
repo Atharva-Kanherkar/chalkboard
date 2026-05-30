@@ -9,6 +9,7 @@ export async function createJob(prompt: string, opts: GenerateOptions): Promise<
     music: opts.music,
     images: opts.images,
   };
+  if (opts.format === 'short') body.format = 'short';
   if (opts.selfCorrect) body.selfCorrect = true;
   if (opts.demo) {
     body.llm = { kind: 'stub' };

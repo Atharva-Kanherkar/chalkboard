@@ -29,14 +29,16 @@ export interface GenerateResult {
 export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
   const onProgress = opts.onProgress ?? noop;
   const language = opts.language ?? 'en';
-  const aspectRatio = opts.aspectRatio ?? '16:9';
+  const format = opts.format ?? 'explainer';
+  // Shorts default to vertical unless the caller pinned an aspect ratio.
+  const aspectRatio = opts.aspectRatio ?? (format === 'short' ? '9:16' : '16:9');
 
   const llm = resolveLLMProvider(opts.llm);
   const tts = resolveTTSProvider(opts.tts);
 
   // -------- 1. script ----------
   emit(onProgress, { phase: 'script', message: `generating script via ${llm.name}` });
-  const raw = await llm.generateScript({ prompt: opts.prompt, language, aspectRatio });
+  const raw = await llm.generateScript({ prompt: opts.prompt, language, aspectRatio, format });
   emit(onProgress, {
     phase: 'script',
     message: `script ready (${raw.scenes.length} scenes)`,

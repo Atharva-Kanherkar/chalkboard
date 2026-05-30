@@ -20,7 +20,10 @@ export interface Job {
   updatedAt: string;
 }
 
+export type StudioMode = 'explainer' | 'reels';
+
 export interface GenerateOptions {
+  format: 'explainer' | 'short';
   aspectRatio: AspectRatio;
   subtitles: boolean;
   music: boolean;

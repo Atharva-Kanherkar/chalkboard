@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { parseSceneScript } from './parse.js';
-import { SYSTEM_PROMPT, userPromptFor } from './prompt.js';
+import { systemPromptFor, userPromptFor } from './prompt.js';
 import type { LLMProvider, ScriptGenerationInput } from './provider.js';
 import { SCENE_SCRIPT_JSON_SCHEMA } from './schema.js';
 
@@ -37,7 +37,7 @@ export class OpenAIProvider implements LLMProvider {
       model: this.model,
       ...(responseFormat ? { response_format: responseFormat } : {}),
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPromptFor(input.format) },
         { role: 'user', content: userPromptFor(input) },
       ],
     });

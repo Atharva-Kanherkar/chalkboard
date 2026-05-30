@@ -8,6 +8,8 @@ export interface GenerateOptions {
   voice?: string;
   /** Aspect ratio of the final video. */
   aspectRatio?: '16:9' | '9:16' | '1:1';
+  /** 'short' = hook-first vertical reel (defaults aspect to 9:16). Default 'explainer'. */
+  format?: 'explainer' | 'short';
   /** LLM provider override. */
   llm?: LLMProviderConfig;
   /** TTS provider override. */

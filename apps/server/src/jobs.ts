@@ -78,6 +78,7 @@ export interface RunJobInput {
   prompt: string;
   language: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
+  format?: 'explainer' | 'short';
   voice?: string;
   llm?: LLMProviderConfig;
   tts?: TTSProviderConfig;
@@ -103,6 +104,7 @@ export async function runJob(
     outputPath,
     language: input.language,
     aspectRatio: input.aspectRatio,
+    ...(input.format ? { format: input.format } : {}),
     ...(input.voice ? { voice: input.voice } : {}),
     ...(input.llm ? { llm: input.llm } : {}),
     ...(input.tts ? { tts: input.tts } : {}),

@@ -28,6 +28,7 @@ interface CliFlags {
   imageModel?: string;
   imageQuality?: 'low' | 'medium' | 'high' | 'auto';
   selfCorrect?: string | boolean;
+  short?: boolean;
 }
 
 const program = new Command();
@@ -43,6 +44,7 @@ program
   .option('-o, --output <path>', 'Output mp4 path', 'chalkboard.mp4')
   .option('-l, --lang <bcp47>', 'Narration language (e.g. en, fr, es)', 'en')
   .option('-a, --aspect <ratio>', 'Aspect ratio: 16:9, 9:16, 1:1', '16:9')
+  .option('--short', 'Vertical hook-first reel (defaults aspect to 9:16)')
   .option('--voice <id>', 'Voice id (provider-specific)')
   .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama | stub')
   .option('--llm-model <id>', 'LLM model id')
@@ -70,11 +72,14 @@ program
     }
 
     const flags = rawFlags;
+    // --short defaults the aspect to vertical unless the user pinned a non-default one.
+    const aspectRatio = flags.short && flags.aspect === '16:9' ? '9:16' : flags.aspect;
     const opts: GenerateOptions = {
       prompt,
       outputPath: flags.output,
       language: flags.lang,
-      aspectRatio: flags.aspect,
+      aspectRatio,
+      ...(flags.short ? { format: 'short' } : {}),
       ...(flags.voice ? { voice: flags.voice } : {}),
       ...(flags.workDir ? { workDir: flags.workDir } : {}),
       ...(flags.keep ? { keepWorkDir: true } : {}),

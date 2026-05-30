@@ -1,26 +1,57 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { ChatMessage, GenerateOptions } from '@/lib/types';
+import type { ChatMessage, GenerateOptions, StudioMode } from '@/lib/types';
 import { createJob, pollJob } from '@/lib/api';
 import { Composer } from './composer';
 import { MessageView } from './message';
 import { Sidebar } from './sidebar';
 
-const EXAMPLES = [
-  'How does a hash table work?',
-  'Why is the sky blue?',
-  'Explain how the universe is aging',
-  'How does HTTPS keep my data safe?',
-];
+const EXAMPLES: Record<StudioMode, string[]> = {
+  explainer: [
+    'How does a hash table work?',
+    'Why is the sky blue?',
+    'Explain how the universe is aging',
+    'How does HTTPS keep my data safe?',
+  ],
+  reels: [
+    '3 wild facts about black holes',
+    'Why coffee makes you tired',
+    'How WiFi actually works',
+    'The Monty Hall problem in 20 seconds',
+  ],
+};
 
-const DEFAULT_OPTIONS: GenerateOptions = {
-  aspectRatio: '16:9',
+const HERO: Record<StudioMode, { title: React.ReactNode; sub: string }> = {
+  explainer: {
+    title: (
+      <>
+        Turn a sentence into a <span className="gradient-text">video</span>.
+      </>
+    ),
+    sub: 'Type a topic. chalkboard writes the script, draws the diagrams, generates imagery, narrates it, and renders an mp4 — with subtitles and music.',
+  },
+  reels: {
+    title: (
+      <>
+        Make a <span className="gradient-text">reel</span> from a topic.
+      </>
+    ),
+    sub: 'Vertical 9:16, hook-first, ~30 seconds, big captions, royalty-free music. Post it, then drop a trending sound on top in-app.',
+  },
+};
+
+const BASE_OPTIONS = {
   subtitles: true,
   music: true,
   images: true,
   selfCorrect: false,
   demo: false,
+};
+
+const OPTIONS_FOR: Record<StudioMode, GenerateOptions> = {
+  explainer: { format: 'explainer', aspectRatio: '16:9', ...BASE_OPTIONS },
+  reels: { format: 'short', aspectRatio: '9:16', ...BASE_OPTIONS },
 };
 
 let idSeq = 0;
@@ -29,9 +60,21 @@ const nextId = () => `m${Date.now().toString(36)}-${idSeq++}`;
 export function Studio() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
-  const [options, setOptions] = useState<GenerateOptions>(DEFAULT_OPTIONS);
+  const [mode, setMode] = useState<StudioMode>('explainer');
+  const [options, setOptions] = useState<GenerateOptions>(OPTIONS_FOR.explainer);
   const [busy, setBusy] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Switching studios resets the format + aspect to that lane's defaults,
+  // keeping the user's toggle preferences (music/images/etc.).
+  function switchMode(next: StudioMode) {
+    setMode(next);
+    setOptions((prev) => ({
+      ...prev,
+      format: OPTIONS_FOR[next].format,
+      aspectRatio: OPTIONS_FOR[next].aspectRatio,
+    }));
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -83,7 +126,13 @@ export function Studio() {
 
   return (
     <div className="flex h-dvh overflow-hidden">
-      <Sidebar history={history} onNew={startNew} onSelect={selectGeneration} />
+      <Sidebar
+        mode={mode}
+        onMode={switchMode}
+        history={history}
+        onNew={startNew}
+        onSelect={selectGeneration}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* mobile header */}
@@ -106,15 +155,10 @@ export function Studio() {
           <div className="mx-auto w-full max-w-3xl px-4 pb-6">
             {empty ? (
               <div className="flex min-h-[68vh] flex-col items-center justify-center text-center">
-                <h1 className="text-4xl font-semibold tracking-tight">
-                  Turn a sentence into a <span className="gradient-text">video</span>.
-                </h1>
-                <p className="mt-3 max-w-md text-[15px] text-[var(--muted)]">
-                  Type a topic. chalkboard writes the script, draws the diagrams, generates imagery,
-                  narrates it, and renders an mp4 — with subtitles and music.
-                </p>
+                <h1 className="text-4xl font-semibold tracking-tight">{HERO[mode].title}</h1>
+                <p className="mt-3 max-w-md text-[15px] text-[var(--muted)]">{HERO[mode].sub}</p>
                 <div className="mt-7 flex max-w-xl flex-wrap justify-center gap-2">
-                  {EXAMPLES.map((ex) => (
+                  {EXAMPLES[mode].map((ex) => (
                     <button
                       key={ex}
                       type="button"

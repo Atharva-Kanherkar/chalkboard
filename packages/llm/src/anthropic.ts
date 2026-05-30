@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { parseSceneScript } from './parse.js';
-import { SYSTEM_PROMPT, userPromptFor } from './prompt.js';
+import { systemPromptFor, userPromptFor } from './prompt.js';
 import type { LLMProvider, ScriptGenerationInput } from './provider.js';
 import { SCENE_SCRIPT_JSON_SCHEMA, SCENE_SCRIPT_TOOL_NAME } from './schema.js';
 
@@ -40,7 +40,7 @@ export class AnthropicProvider implements LLMProvider {
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 8192,
-      system: SYSTEM_PROMPT,
+      system: systemPromptFor(input.format),
       tools: [
         {
           name: SCENE_SCRIPT_TOOL_NAME,
@@ -66,7 +66,7 @@ export class AnthropicProvider implements LLMProvider {
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 8192,
-      system: SYSTEM_PROMPT,
+      system: systemPromptFor(input.format),
       messages: [{ role: 'user', content: userPromptFor(input) }],
     });
     const block = response.content[0];

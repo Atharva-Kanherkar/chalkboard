@@ -104,22 +104,131 @@ const DEFAULT_SCRIPT: SceneScript = {
   ],
 };
 
+// Vertical 1080x1920 short, big fonts, top-to-bottom — used by Demo mode in the
+// Reels lane so it renders correctly without an LLM call.
+const SHORT_SCRIPT: SceneScript = {
+  version: '1',
+  meta: { language: 'en', aspectRatio: '9:16', title: 'Stub Short' },
+  scenes: [
+    {
+      id: 'short-1',
+      narration: "Here's something most people never stop to think about.",
+      elements: [
+        {
+          id: 'h-title',
+          type: 'text',
+          x: 100,
+          y: 240,
+          text: 'Wait…',
+          fontSize: 104,
+          fontFamily: 1,
+          strokeColor: '#1e1e1e',
+          maxWidth: 880,
+          textAlign: 'center',
+        },
+        {
+          id: 'h-star',
+          type: 'svg',
+          x: 380,
+          y: 720,
+          width: 320,
+          height: 320,
+          motif: 'star',
+          color: '#f08c00',
+        },
+      ],
+    },
+    {
+      id: 'short-2',
+      narration: 'This whole vertical video was generated from a single prompt.',
+      elements: [
+        {
+          id: 's2-title',
+          type: 'text',
+          x: 100,
+          y: 240,
+          text: 'One prompt in',
+          fontSize: 84,
+          fontFamily: 1,
+          strokeColor: '#1e1e1e',
+          maxWidth: 880,
+          textAlign: 'center',
+        },
+        {
+          id: 's2-box',
+          type: 'rectangle',
+          x: 240,
+          y: 720,
+          width: 600,
+          height: 380,
+          strokeColor: '#1e1e1e',
+          backgroundColor: '#a5d8ff',
+          fillStyle: 'solid',
+        },
+        {
+          id: 's2-label',
+          type: 'text',
+          x: 300,
+          y: 860,
+          text: 'a video out',
+          fontSize: 56,
+          fontFamily: 1,
+          strokeColor: '#1e1e1e',
+          maxWidth: 480,
+          textAlign: 'center',
+        },
+      ],
+    },
+    {
+      id: 'short-3',
+      narration: "It's open source, and it runs on your own machine. Follow for more.",
+      elements: [
+        {
+          id: 's3-title',
+          type: 'text',
+          x: 100,
+          y: 260,
+          text: 'Open source.',
+          fontSize: 92,
+          fontFamily: 1,
+          strokeColor: '#1e1e1e',
+          maxWidth: 880,
+          textAlign: 'center',
+        },
+        {
+          id: 's3-check',
+          type: 'svg',
+          x: 400,
+          y: 760,
+          width: 280,
+          height: 280,
+          motif: 'check',
+          color: '#2f9e44',
+        },
+      ],
+    },
+  ],
+};
+
 export class StubLLMProvider implements LLMProvider {
   readonly name = 'stub';
-  private readonly script: SceneScript;
+  private readonly script: SceneScript | undefined;
 
   constructor(opts: { script?: SceneScript } = {}) {
-    this.script = opts.script ?? DEFAULT_SCRIPT;
+    this.script = opts.script;
   }
 
   async generateScript(input: ScriptGenerationInput): Promise<SceneScript> {
+    // An explicit override always wins; otherwise pick the script that matches
+    // the requested format so Demo mode looks right in both lanes.
+    const base = this.script ?? (input.format === 'short' ? SHORT_SCRIPT : DEFAULT_SCRIPT);
     return {
-      ...this.script,
+      ...base,
       meta: {
-        ...this.script.meta,
+        ...base.meta,
         language: input.language,
         aspectRatio: input.aspectRatio,
-        title: this.script.meta.title ?? input.prompt.slice(0, 40),
+        title: base.meta.title ?? input.prompt.slice(0, 40),
       },
     };
   }
