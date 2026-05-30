@@ -86,6 +86,11 @@ Pastel palette (use these for fills): "#a5d8ff" blue, "#ffec99" yellow, "#b2f2bb
 - text: { x, y, text, fontSize?, fontFamily?, maxWidth?, containerId?, textAlign?, verticalAlign? }
   fontFamily: 1 (hand-drawn Virgil — default), 2 (sans-serif Helvetica), 3 (monospace)
 
+### Image (USE THIS for real-world / visual topics!)
+- image: { x, y, width, height, prompt: "<what to depict>" }
+  Chalkboard generates the image from your prompt and draws it (cover-fit, rounded corners) into the box. Use this whenever real imagery beats hand-drawn shapes: astronomy (stars, galaxies, planets), biology (cells, organs), geography, historical scenes, products, animals, anything photographic or richly illustrated. A box of width 520–760 sits nicely beside explanatory text. Write a vivid, specific prompt (subject + style), e.g. "a glowing spiral galaxy with reddened ageing stars on a dark background".
+  Lean on images for visual/science explainers — don't render "how the universe ages" as empty rectangles when an image of stars and galaxies tells the story.
+
 ### Code (use this for programming videos!)
 - code-block: { x, y, width, height?, text, fontSize?, backgroundColor? }
   text contains literal source code with \\n for line breaks. Use this whenever you'd show code (snippets, function defs, JSON, shell). Background defaults to "#f1f3f5".

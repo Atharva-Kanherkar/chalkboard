@@ -127,6 +127,9 @@ importers:
       '@chalkboard/whiteboard':
         specifier: workspace:*
         version: link:../whiteboard
+      openai:
+        specifier: ^4.77.0
+        version: 4.104.0
     devDependencies:
       '@types/node':
         specifier: ^22.10.0

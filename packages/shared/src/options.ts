@@ -24,6 +24,10 @@ export interface GenerateOptions {
   music?: boolean;
   /** Custom background music track. Defaults to the bundled CC0 ambient loop. */
   musicTrack?: string;
+  /** Generate real imagery for `image` elements (needs OPENAI_API_KEY). Default: true. */
+  images?: boolean;
+  /** Override the image model (default `gpt-image-1`). */
+  imageModel?: string;
 }
 
 export type LLMProviderConfig =

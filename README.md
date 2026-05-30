@@ -101,6 +101,16 @@ original ffmpeg-synthesized ambient pad — see `packages/renderer/assets/`).
 Disable with `--no-music` / `"music": false`, or supply your own track with
 `--music-track <path>` / `"musicTrack": "<path>"`.
 
+### Images
+
+For visual/real-world topics (astronomy, biology, geography…), the model can
+emit `image` elements with a `prompt`, and chalkboard generates real imagery for
+them with OpenAI's **`gpt-image-1`** and draws it (cover-fit, rounded corners)
+into the box. Needs `OPENAI_API_KEY`; **each image costs money**, so generation
+is cached per prompt and capped per video. Disable with `--no-images` /
+`"images": false` (image elements then render as neutral placeholders). Override
+the model with `--image-model <id>`.
+
 ## Usage
 
 ### CLI

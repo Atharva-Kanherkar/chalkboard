@@ -16,6 +16,7 @@ import { resolveLLMProvider } from '@chalkboard/llm';
 import { resolveTTSProvider } from '@chalkboard/narration';
 import { renderScript, muxFinal, probeAudioDuration } from '@chalkboard/renderer';
 import { repairScript } from '@chalkboard/whiteboard';
+import { generateSceneImages } from './images.js';
 
 export interface GenerateResult {
   outputPath: string;
@@ -58,6 +59,22 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
     : await mkdtemp(join(tmpdir(), 'chalkboard-'));
 
   try {
+    // -------- 2b. image generation ----------
+    // Resolve any `image` element prompts into real imagery before render.
+    if (opts.images !== false) {
+      const img = await generateSceneImages(script, {
+        workDir,
+        ...(opts.imageModel ? { model: opts.imageModel } : {}),
+        onProgress: (msg) => emit(onProgress, { phase: 'render', message: `[image] ${msg}` }),
+      });
+      if (img.generated > 0) {
+        emit(onProgress, {
+          phase: 'render',
+          message: `[image] generated ${img.generated} image(s)`,
+        });
+      }
+    }
+
     // -------- 3. narration per scene ----------
     const audioPaths: string[] = [];
     const audioDurations: number[] = [];

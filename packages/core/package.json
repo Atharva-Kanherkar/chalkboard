@@ -21,7 +21,8 @@
     "@chalkboard/narration": "workspace:*",
     "@chalkboard/renderer": "workspace:*",
     "@chalkboard/shared": "workspace:*",
-    "@chalkboard/whiteboard": "workspace:*"
+    "@chalkboard/whiteboard": "workspace:*",
+    "openai": "^4.77.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

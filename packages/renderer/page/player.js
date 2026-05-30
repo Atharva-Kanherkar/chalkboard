@@ -55,6 +55,7 @@
     'step-marker',
     'group',
     'highlight',
+    'image',
   ]);
 
   // Decide whether a scene has at least one visible thing to draw. We accept
@@ -75,10 +76,48 @@
         if ((el.width || 0) > 1 || (el.height || 0) > 1) return true;
         continue;
       }
+      if (el.type === 'image') {
+        // A generated image with a source and a box is renderable.
+        if ((el.src || el.dataUrl) && (el.width || 0) > 1 && (el.height || 0) > 1) return true;
+        continue;
+      }
       // shapes
       if ((el.width || 0) > 1 && (el.height || 0) > 1) return true;
     }
     return false;
+  }
+
+  // -------- image preload --------
+  // Generated images arrive as data URLs on `image` elements. Decode them all
+  // up front (before recording) so drawing never blocks on a half-loaded image.
+  const imageCache = {};
+  function imageSrc(el) {
+    return el && (el.src || el.dataUrl);
+  }
+  async function preloadImages(script) {
+    const srcs = [];
+    for (const scene of script.scenes || []) {
+      for (const el of scene.elements || []) {
+        if (el && el.type === 'image' && imageSrc(el) && el.id) srcs.push(el);
+      }
+    }
+    await Promise.all(
+      srcs.map(
+        (el) =>
+          new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              imageCache[el.id] = img;
+              resolve();
+            };
+            img.onerror = () => {
+              console.warn('[chalkboard] image failed to load: %s', el.id);
+              resolve();
+            };
+            img.src = imageSrc(el);
+          }),
+      ),
+    );
   }
 
   // Build a minimal "title card" from a scene's narration so the canvas
@@ -502,8 +541,64 @@
     }
   }
 
+  // Draw a generated image with object-fit: cover into (x,y,w,h), clipped to
+  // rounded corners. Honors the current globalAlpha (set by the fade-in).
+  function drawImageEl(el) {
+    const img = imageCache[el.id];
+    const x = el.x || 0;
+    const y = el.y || 0;
+    const w = el.width || 0;
+    const h = el.height || 0;
+    if (w <= 0 || h <= 0) return;
+
+    if (!img) {
+      // Source missing/failed — draw a soft placeholder box so the slot still
+      // reads as intentional rather than a blank gap.
+      ctx.save();
+      ctx.fillStyle = '#e9ecef';
+      ctx.fillRect(x, y, w, h);
+      ctx.restore();
+      return;
+    }
+
+    const radius = typeof el.borderRadius === 'number' ? el.borderRadius : 16;
+    ctx.save();
+    roundedRectPath(x, y, w, h, radius);
+    ctx.clip();
+    // cover-fit
+    const scale = Math.max(w / img.width, h / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    const dx = x + (w - dw) / 2;
+    const dy = y + (h - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
+    ctx.restore();
+
+    // subtle frame
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, (ctx.globalAlpha ?? 1) * 0.5);
+    ctx.strokeStyle = '#1e1e1e';
+    ctx.lineWidth = 2;
+    roundedRectPath(x, y, w, h, radius);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function roundedRectPath(x, y, w, h, r) {
+    const rad = Math.max(0, Math.min(r, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
   function drawElement(rc, el, byId) {
     switch (el.type) {
+      case 'image':
+        return drawImageEl(el);
       case 'rectangle':
         return drawRect(rc, el);
       case 'ellipse':
@@ -701,6 +796,12 @@
     } catch (err) {
       console.error(err.message);
       // Keep going with no rough — at least text scenes will render.
+    }
+    // Decode any generated images before we start recording.
+    try {
+      await preloadImages(cfg.script);
+    } catch (err) {
+      console.warn('[chalkboard] image preload error:', err && err.message ? err.message : err);
     }
     paintBg();
     // Give the document a paint to make sure the canvas is on screen before

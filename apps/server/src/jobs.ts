@@ -83,6 +83,7 @@ export interface RunJobInput {
   tts?: TTSProviderConfig;
   subtitles?: boolean;
   music?: boolean;
+  images?: boolean;
 }
 
 export async function runJob(
@@ -105,6 +106,7 @@ export async function runJob(
     ...(input.tts ? { tts: input.tts } : {}),
     ...(input.subtitles === false ? { subtitles: false } : {}),
     ...(input.music === false ? { music: false } : {}),
+    ...(input.images === false ? { images: false } : {}),
     onProgress: (e) => store.pushProgress(job.id, e),
   };
 

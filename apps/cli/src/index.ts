@@ -24,6 +24,8 @@ interface CliFlags {
   subtitles?: boolean;
   music?: boolean;
   musicTrack?: string;
+  images?: boolean;
+  imageModel?: string;
 }
 
 const program = new Command();
@@ -50,6 +52,8 @@ program
   .option('--no-subtitles', 'Disable burned-in captions (on by default)')
   .option('--no-music', 'Disable background music (on by default)')
   .option('--music-track <path>', 'Custom background music file (defaults to bundled loop)')
+  .option('--no-images', 'Disable image generation for image elements (on by default)')
+  .option('--image-model <id>', 'Image model id (default gpt-image-1)')
   .option('-q, --quiet', 'Suppress progress output')
   .action(async (promptParts: string[], rawFlags: CliFlags) => {
     const prompt = promptParts.join(' ').trim();
@@ -70,6 +74,8 @@ program
       ...(flags.subtitles === false ? { subtitles: false } : {}),
       ...(flags.music === false ? { music: false } : {}),
       ...(flags.musicTrack ? { musicTrack: flags.musicTrack } : {}),
+      ...(flags.images === false ? { images: false } : {}),
+      ...(flags.imageModel ? { imageModel: flags.imageModel } : {}),
       ...(flags.llm ? { llm: buildLLMConfig(flags) } : {}),
       ...(flags.tts ? { tts: buildTTSConfig(flags) } : {}),
       onProgress: flags.quiet ? () => undefined : printProgress,
