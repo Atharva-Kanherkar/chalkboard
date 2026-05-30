@@ -9,12 +9,14 @@ and falls back to free local providers (Ollama + Piper TTS), so the marginal
 cost per video can be zero. MIT-licensed: yours to fork, embed, and bill for.
 
 <p align="center">
-  <video src="https://github.com/Atharva-Kanherkar/chalkboard/releases/download/v0.1.0/chalkboard-demo.mp4" controls muted width="780"></video>
+  <a href="https://github.com/Atharva-Kanherkar/chalkboard/releases/download/v0.1.0/chalkboard-demo.mp4">
+    <img src="docs/demo.png" alt="chalkboard demo — how the universe is aging" width="780">
+  </a>
 </p>
 
-> ▶️ The clip above — _"how the universe is aging"_ — was generated end to end
-> from that single prompt.
-> [Watch / download it here.](https://github.com/Atharva-Kanherkar/chalkboard/releases/download/v0.1.0/chalkboard-demo.mp4)
+<p align="center">
+  <em>▶️ <a href="https://github.com/Atharva-Kanherkar/chalkboard/releases/download/v0.1.0/chalkboard-demo.mp4">Watch the demo</a> — “how the universe is aging”, generated end to end from that single prompt.</em>
+</p>
 
 ## Features
 
