@@ -20,6 +20,10 @@ export interface GenerateOptions {
   keepWorkDir?: boolean;
   /** Burn per-scene captions into the video. Default: true. */
   subtitles?: boolean;
+  /** Mix background music (ducked under narration) into the video. Default: true. */
+  music?: boolean;
+  /** Custom background music track. Defaults to the bundled CC0 ambient loop. */
+  musicTrack?: string;
 }
 
 export type LLMProviderConfig =

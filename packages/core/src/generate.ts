@@ -102,6 +102,14 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       timings: rendered.timings,
       outputPath,
       workDir,
+      ...(opts.music === false
+        ? {}
+        : {
+            music: {
+              enabled: true,
+              ...(opts.musicTrack ? { path: opts.musicTrack } : {}),
+            },
+          }),
       onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
     });
 

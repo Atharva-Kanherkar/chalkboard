@@ -11,8 +11,12 @@
 
 import { spawn } from 'node:child_process';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { SceneTiming } from './timing.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface AudioTrack {
   /** Path to the per-scene audio file (any format ffmpeg can read). */
@@ -29,7 +33,27 @@ export interface MuxInput {
   outputPath: string;
   /** Temp dir for intermediate files. */
   workDir: string;
+  /**
+   * Background music. When enabled, a track is looped under the narration and
+   * sidechain-ducked so the voice stays clearly legible. Defaults to the
+   * bundled CC0 ambient loop; pass `path` for a custom track.
+   */
+  music?: {
+    enabled: boolean;
+    path?: string;
+    /** Pre-duck music gain, 0..1. Default 0.5. */
+    gain?: number;
+  };
   onProgress?: (msg: string) => void;
+}
+
+/** Resolve the bundled ambient loop, looking in both dist/ and src/ layouts. */
+export function bundledMusicPath(): string | null {
+  const candidates = [
+    resolve(__dirname, '../assets/ambient-loop.mp3'),
+    resolve(__dirname, '../../assets/ambient-loop.mp3'),
+  ];
+  return candidates.find((c) => existsSync(c)) ?? null;
 }
 
 export async function muxFinal(input: MuxInput): Promise<string> {
@@ -64,36 +88,81 @@ export async function muxFinal(input: MuxInput): Promise<string> {
     input.onProgress,
   );
 
+  // Resolve background music, if enabled. Falls back to the bundled loop.
+  let musicPath: string | null = null;
+  if (input.music?.enabled) {
+    musicPath = input.music.path ?? bundledMusicPath();
+    if (!musicPath || !existsSync(musicPath)) {
+      input.onProgress?.('background music requested but no track found — skipping');
+      musicPath = null;
+    }
+  }
+
   // Final mux. Re-encode video to h264 for portability; audio to aac.
   // (Captions are drawn onto the canvas during render, so nothing to burn here.)
-  await runFfmpeg(
-    [
-      '-y',
-      '-i',
-      silentVideoPath,
-      '-i',
-      combinedAudio,
-      '-c:v',
-      'libx264',
-      '-pix_fmt',
-      'yuv420p',
-      '-preset',
-      'medium',
-      '-crf',
-      '20',
-      '-c:a',
-      'aac',
-      '-b:a',
-      '192k',
-      '-shortest',
-      '-movflags',
-      '+faststart',
-      outputPath,
-    ],
-    input.onProgress,
-  );
+  const videoOut = [
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-preset',
+    'medium',
+    '-crf',
+    '20',
+    '-c:a',
+    'aac',
+    '-b:a',
+    '192k',
+    '-shortest',
+    '-movflags',
+    '+faststart',
+    outputPath,
+  ];
+
+  if (musicPath) {
+    // Loop the music (-stream_loop) under the voice. sidechaincompress ducks
+    // the music whenever the voice is present; amix(normalize=0) keeps the
+    // voice at full level; alimiter guards against the summed peak clipping.
+    const gain = clamp01(input.music?.gain ?? 0.5);
+    const filter =
+      `[2:a]volume=${gain.toFixed(3)},aformat=sample_rates=44100:channel_layouts=stereo[mraw];` +
+      `[mraw][1:a]sidechaincompress=threshold=0.03:ratio=6:attack=10:release=350[mduck];` +
+      `[1:a][mduck]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]`;
+    input.onProgress?.('mixing background music (ducked under narration)');
+    await runFfmpeg(
+      [
+        '-y',
+        '-i',
+        silentVideoPath,
+        '-i',
+        combinedAudio,
+        '-stream_loop',
+        '-1',
+        '-i',
+        musicPath,
+        '-filter_complex',
+        filter,
+        '-map',
+        '0:v',
+        '-map',
+        '[aout]',
+        ...videoOut,
+      ],
+      input.onProgress,
+    );
+  } else {
+    await runFfmpeg(
+      ['-y', '-i', silentVideoPath, '-i', combinedAudio, ...videoOut],
+      input.onProgress,
+    );
+  }
 
   return outputPath;
+}
+
+function clamp01(n: number): number {
+  if (!Number.isFinite(n)) return 0.5;
+  return Math.min(1, Math.max(0, n));
 }
 
 async function padOrTrim(input: string, targetSec: number, output: string): Promise<void> {

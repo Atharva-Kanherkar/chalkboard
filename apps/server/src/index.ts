@@ -42,6 +42,7 @@ app.post('/generate', async (c) => {
   const llm = parseLLMProvider(body['llm']);
   const tts = parseTTSProvider(body['tts']);
   const subtitles = body['subtitles'] === false ? false : undefined;
+  const music = body['music'] === false ? false : undefined;
 
   const job = jobs.create();
   // Fire and forget; the worker updates job state in-place.
@@ -53,6 +54,7 @@ app.post('/generate', async (c) => {
     ...(llm ? { llm } : {}),
     ...(tts ? { tts } : {}),
     ...(subtitles === false ? { subtitles: false } : {}),
+    ...(music === false ? { music: false } : {}),
   }).catch((err) => {
     jobs.fail(job.id, err instanceof Error ? err.message : String(err));
   });

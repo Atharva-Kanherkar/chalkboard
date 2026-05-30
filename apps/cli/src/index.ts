@@ -22,6 +22,8 @@ interface CliFlags {
   keep?: boolean;
   quiet?: boolean;
   subtitles?: boolean;
+  music?: boolean;
+  musicTrack?: string;
 }
 
 const program = new Command();
@@ -46,6 +48,8 @@ program
   .option('--work-dir <path>', 'Working dir (kept around if set)')
   .option('--keep', "Don't clean the working dir")
   .option('--no-subtitles', 'Disable burned-in captions (on by default)')
+  .option('--no-music', 'Disable background music (on by default)')
+  .option('--music-track <path>', 'Custom background music file (defaults to bundled loop)')
   .option('-q, --quiet', 'Suppress progress output')
   .action(async (promptParts: string[], rawFlags: CliFlags) => {
     const prompt = promptParts.join(' ').trim();
@@ -64,6 +68,8 @@ program
       ...(flags.workDir ? { workDir: flags.workDir } : {}),
       ...(flags.keep ? { keepWorkDir: true } : {}),
       ...(flags.subtitles === false ? { subtitles: false } : {}),
+      ...(flags.music === false ? { music: false } : {}),
+      ...(flags.musicTrack ? { musicTrack: flags.musicTrack } : {}),
       ...(flags.llm ? { llm: buildLLMConfig(flags) } : {}),
       ...(flags.tts ? { tts: buildTTSConfig(flags) } : {}),
       onProgress: flags.quiet ? () => undefined : printProgress,

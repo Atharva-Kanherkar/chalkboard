@@ -18,6 +18,7 @@ coverage/
 *.wav
 !examples/**/*.mp4
 !examples/**/*.mp3
+!packages/renderer/assets/*.mp3
 
 # secrets
 .env

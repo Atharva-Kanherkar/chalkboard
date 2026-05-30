@@ -92,6 +92,15 @@ no player support or libass-enabled `ffmpeg` required. They're built from the
 narration and timed per scene. Disable with `--no-subtitles` (CLI) or
 `"subtitles": false` (HTTP body / `GenerateOptions`).
 
+### Background music
+
+A subtle music bed is **on by default**, looped under the narration and
+**sidechain-ducked** — the music automatically dips ~10 dB whenever the voice is
+speaking, so narration stays clearly legible. The bundled loop is CC0 (an
+original ffmpeg-synthesized ambient pad — see `packages/renderer/assets/`).
+Disable with `--no-music` / `"music": false`, or supply your own track with
+`--music-track <path>` / `"musicTrack": "<path>"`.
+
 ## Usage
 
 ### CLI

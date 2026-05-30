@@ -82,6 +82,7 @@ export interface RunJobInput {
   llm?: LLMProviderConfig;
   tts?: TTSProviderConfig;
   subtitles?: boolean;
+  music?: boolean;
 }
 
 export async function runJob(
@@ -103,6 +104,7 @@ export async function runJob(
     ...(input.llm ? { llm: input.llm } : {}),
     ...(input.tts ? { tts: input.tts } : {}),
     ...(input.subtitles === false ? { subtitles: false } : {}),
+    ...(input.music === false ? { music: false } : {}),
     onProgress: (e) => store.pushProgress(job.id, e),
   };
 
