@@ -49,6 +49,7 @@ const BOXED = new Set([
   'diamond',
   'text',
   'image',
+  'svg',
   'code-block',
   'step-marker',
   'group',

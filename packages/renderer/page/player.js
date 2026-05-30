@@ -56,6 +56,7 @@
     'group',
     'highlight',
     'image',
+    'svg',
   ]);
 
   // Decide whether a scene has at least one visible thing to draw. We accept
@@ -81,6 +82,12 @@
         if ((el.src || el.dataUrl) && (el.width || 0) > 1 && (el.height || 0) > 1) return true;
         continue;
       }
+      if (el.type === 'svg') {
+        const hasArt =
+          (typeof el.svg === 'string' && el.svg.trim()) || typeof el.motif === 'string';
+        if (hasArt && (el.width || 0) > 1 && (el.height || 0) > 1) return true;
+        continue;
+      }
       // shapes
       if ((el.width || 0) > 1 && (el.height || 0) > 1) return true;
     }
@@ -90,15 +97,55 @@
   // -------- image preload --------
   // Generated images arrive as data URLs on `image` elements. Decode them all
   // up front (before recording) so drawing never blocks on a half-loaded image.
+  // A tiny library of reusable vector motifs (simple geometric silhouettes) the
+  // model can drop in by name without writing SVG. MIT/CC0 — authored here.
+  const MOTIFS = {
+    star: 'M12 2l3 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.9 21l1.2-6.8-5-4.9 6.9-1z',
+    bolt: 'M13 2L4 14h6l-1 8 9-12h-6z',
+    heart:
+      'M12 21s-7.5-4.6-10-9.3C.4 8.4 2 5 5.2 5c2 0 3.3 1.1 4 2.2C9.8 6.1 11.2 5 13.2 5 16.3 5 18 8.4 16.4 11.7 13.9 16.4 12 21 12 21z',
+    check: 'M9 16.2l-3.5-3.5-1.4 1.4L9 19 20 8l-1.4-1.4z',
+    cross:
+      'M18.3 5.7L12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7 4.3 4.3l6.3 6.3 6.3-6.3z',
+    sun: 'M12 7a5 5 0 100 10 5 5 0 000-10zM12 1l2 3h-4zM12 23l-2-3h4zM1 12l3-2v4zM23 12l-3 2v-4zM4 4l3 1-2 2zM20 4l-1 3-2-2zM4 20l1-3 2 2zM20 20l-3-1 2-2z',
+    cloud: 'M19 18H7a5 5 0 01-.5-9.97A6 6 0 0118 8.5a4.5 4.5 0 011 8.9z',
+    gear: 'M12 8a4 4 0 100 8 4 4 0 000-8zm9 4l-2.1-.6c-.1-.5-.3-1-.5-1.5l1.1-1.9-1.9-1.9-1.9 1.1c-.5-.2-1-.4-1.5-.5L13.5 3h-2.6L10.3 5c-.5.1-1 .3-1.5.5L6.9 4.4 5 6.3l1.1 1.9c-.2.5-.4 1-.5 1.5L3.5 11v2.6l2.1.6c.1.5.3 1 .5 1.5l-1.1 1.9 1.9 1.9 1.9-1.1c.5.2 1 .4 1.5.5l.6 2.1h2.6l.6-2.1c.5-.1 1-.3 1.5-.5l1.9 1.1 1.9-1.9-1.1-1.9c.2-.5.4-1 .5-1.5L21 13.5z',
+    lightbulb: 'M9 21h6v-1H9zm3-19a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z',
+    database:
+      'M12 2c-4.4 0-8 1.3-8 3v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5c0-1.7-3.6-3-8-3zm0 2c3.9 0 6 1.1 6 1s-2.1 1-6 1-6-1.1-6-1 2.1-1 6-1z',
+    'arrow-right': 'M4 11h12.2l-5.6-5.6L12 4l8 8-8 8-1.4-1.4 5.6-5.6H4z',
+  };
+  function motifSvg(name, color) {
+    const path = MOTIFS[name];
+    if (!path) return null;
+    const fill = color || '#1e1e1e';
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${fill}"><path d="${path}"/></svg>`;
+  }
+
   const imageCache = {};
   function imageSrc(el) {
-    return el && (el.src || el.dataUrl);
+    if (!el) return undefined;
+    // `svg` elements carry inline markup OR a named motif; either way we turn it
+    // into a data URL and decode it exactly like a generated image (no deps).
+    if (el.type === 'svg') {
+      let markup = typeof el.svg === 'string' && el.svg.trim() ? el.svg : null;
+      if (!markup && typeof el.motif === 'string') markup = motifSvg(el.motif, el.color);
+      if (!markup) return undefined;
+      try {
+        return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(markup)));
+      } catch (e) {
+        return undefined;
+      }
+    }
+    return el.src || el.dataUrl;
   }
   async function preloadImages(script) {
     const srcs = [];
     for (const scene of script.scenes || []) {
       for (const el of scene.elements || []) {
-        if (el && el.type === 'image' && imageSrc(el) && el.id) srcs.push(el);
+        if (el && (el.type === 'image' || el.type === 'svg') && imageSrc(el) && el.id) {
+          srcs.push(el);
+        }
       }
     }
     await Promise.all(
@@ -595,10 +642,27 @@
     ctx.closePath();
   }
 
+  // Draw a decoded inline SVG with object-fit: contain (never crop vector art),
+  // centered in the box. No frame — SVG motifs sit directly on the whiteboard.
+  function drawSvgEl(el) {
+    const img = imageCache[el.id];
+    const x = el.x || 0;
+    const y = el.y || 0;
+    const w = el.width || 0;
+    const h = el.height || 0;
+    if (w <= 0 || h <= 0 || !img || !img.width || !img.height) return;
+    const scale = Math.min(w / img.width, h / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+  }
+
   function drawElement(rc, el, byId) {
     switch (el.type) {
       case 'image':
         return drawImageEl(el);
+      case 'svg':
+        return drawSvgEl(el);
       case 'rectangle':
         return drawRect(rc, el);
       case 'ellipse':

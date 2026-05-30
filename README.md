@@ -125,6 +125,23 @@ before finalizing. Two layers:
    contrast, text over a dark shape, awkward composition. Bounded passes; needs
    `OPENAI_API_KEY`.
 
+### Vector art (SVG + motifs)
+
+Beyond the hand-drawn shapes, the model can emit `svg` elements for crisp vector
+art at **zero API cost**:
+
+- `{ type: "svg", motif: "star", color: "#f08c00", x, y, width, height }` — a
+  built-in icon by name (`star`, `bolt`, `heart`, `check`, `cross`, `sun`,
+  `cloud`, `gear`, `lightbulb`, `database`, `arrow-right`).
+- `{ type: "svg", svg: "<svg>…</svg>", … }` — any custom inline SVG, drawn
+  contained (never cropped) in the box.
+
+> The original ask mentioned **Remotion** for animation. Remotion is
+> source-available with a paid company license, which conflicts with this MIT
+> "fork, embed, and bill for" repo, so it isn't used. Static SVG/motifs ship
+> here; animated vector playback (e.g. MIT-licensed Lottie, blitted per-frame
+> into the canvas recording) is a sensible follow-up tracked on #12.
+
 ## Usage
 
 ### CLI

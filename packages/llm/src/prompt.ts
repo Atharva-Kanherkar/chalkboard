@@ -91,6 +91,13 @@ Pastel palette (use these for fills): "#a5d8ff" blue, "#ffec99" yellow, "#b2f2bb
   Chalkboard generates the image from your prompt and draws it (cover-fit, rounded corners) into the box. Use this whenever real imagery beats hand-drawn shapes: astronomy (stars, galaxies, planets), biology (cells, organs), geography, historical scenes, products, animals, anything photographic or richly illustrated. A box of width 520–760 sits nicely beside explanatory text. Write a vivid, specific prompt (subject + style), e.g. "a glowing spiral galaxy with reddened ageing stars on a dark background".
   Lean on images for visual/science explainers — don't render "how the universe ages" as empty rectangles when an image of stars and galaxies tells the story.
 
+### SVG / icons (cheap, crisp vector art — no API cost)
+- svg: { x, y, width, height, motif?: "<name>", svg?: "<inline svg>", color? }
+  Two ways to use it:
+  1. motif — drop in a built-in icon by name. Available: "star", "bolt", "heart", "check", "cross", "sun", "cloud", "gear", "lightbulb", "database", "arrow-right". Optional "color" (hex). Great for status ticks, accents, simple concept icons.
+  2. svg — provide your own inline "<svg>…</svg>" markup for a custom diagram/icon. The renderer draws it crisp, contained (never cropped) in the box.
+  Use svg for clean iconography and small custom vector drawings; use the image element (above) for photographic/illustrative content. SVG/motifs cost nothing — reach for them freely to make scenes less bare.
+
 ### Code (use this for programming videos!)
 - code-block: { x, y, width, height?, text, fontSize?, backgroundColor? }
   text contains literal source code with \\n for line breaks. Use this whenever you'd show code (snippets, function defs, JSON, shell). Background defaults to "#f1f3f5".

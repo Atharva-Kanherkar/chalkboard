@@ -54,6 +54,21 @@ describe('repairScript — overflow', () => {
     expect(out.scenes[0]!.elements![0]!.x).toBe(-100);
     expect(report.clamped).toBe(0);
   });
+
+  it('clamps svg and image elements like other boxes', () => {
+    const { script: out, report } = repairScript(
+      script([
+        { id: 'svg', type: 'svg', x: 1800, y: 200, width: 300, height: 200, motif: 'star' },
+        { id: 'img', type: 'image', x: -50, y: 950, width: 300, height: 200, src: 'data:...' },
+      ]),
+    );
+    const svg = out.scenes[0]!.elements![0]!;
+    const img = out.scenes[0]!.elements![1]!;
+    expect((svg.x as number) + (svg.width as number)).toBeLessThanOrEqual(1920 - 32);
+    expect(img.x as number).toBeGreaterThanOrEqual(32);
+    expect((img.y as number) + (img.height as number)).toBeLessThanOrEqual(1080 - 32);
+    expect(report.clamped).toBe(2);
+  });
 });
 
 describe('repairScript — duplicate text', () => {
