@@ -536,6 +536,64 @@
     return 1 - (1 - c) ** 3;
   }
 
+  // -------- captions --------
+  // Per-scene cue list + the wall-clock time the scene started, set by
+  // playScene. drawCaptionOverlay() picks the active cue and draws it
+  // bottom-center with an outline so it stays legible over any drawing.
+  let captionCues = [];
+  let captionSceneStart = 0;
+
+  function captionWrap(text, maxWidth, font) {
+    ctx.font = font;
+    const words = String(text).split(/\s+/).filter(Boolean);
+    const lines = [];
+    let current = '';
+    for (const word of words) {
+      const test = current ? current + ' ' + word : word;
+      if (current && ctx.measureText(test).width > maxWidth) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
+    }
+    if (current) lines.push(current);
+    return lines.length ? lines : [String(text)];
+  }
+
+  function drawCaptionOverlay() {
+    if (!captionCues || captionCues.length === 0) return;
+    const elapsed = performance.now() - captionSceneStart;
+    const cue = captionCues.find((c) => elapsed >= c.startMs && elapsed < c.endMs);
+    if (!cue || !cue.text) return;
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const fontSize = Math.round(H * 0.04);
+    const font = `600 ${fontSize}px 'Helvetica Neue', Helvetica, Arial, sans-serif`;
+    const maxWidth = W * 0.84;
+    const lines = captionWrap(cue.text, maxWidth, font).slice(0, 3);
+    const lineHeight = fontSize * 1.28;
+    const marginBottom = Math.round(H * 0.06);
+
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(3, Math.round(fontSize * 0.18));
+    const cx = W / 2;
+    let baseY = H - marginBottom - (lines.length - 1) * lineHeight;
+    for (const line of lines) {
+      ctx.strokeStyle = 'rgba(20,20,20,0.95)';
+      ctx.strokeText(line, cx, baseY);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(line, cx, baseY);
+      baseY += lineHeight;
+    }
+    ctx.restore();
+  }
+
   /**
    * Re-paint the canvas showing element `i` at progress `p` and all prior
    * elements fully drawn. Implemented by painting everything into an offscreen
@@ -557,6 +615,7 @@
       // j > currentIdx: invisible — skip entirely.
     }
     ctx.globalAlpha = 1;
+    drawCaptionOverlay();
   }
 
   function rafLoop(durationMs, onTick) {
@@ -572,8 +631,19 @@
     });
   }
 
-  async function playScene(scene, timing) {
+  // Repaint `paintFn` every frame for `ms` (instead of a blind sleep) so the
+  // caption overlay keeps advancing during holds and inter-element gaps.
+  function holdRepaint(ms, paintFn) {
+    if (ms <= 0) return Promise.resolve();
+    return rafLoop(ms, () => paintFn());
+  }
+
+  async function playScene(scene, timing, cues) {
     let elements = Array.isArray(scene.elements) ? scene.elements : [];
+
+    // Arm captions for this scene; the overlay reads these on every paint.
+    captionCues = Array.isArray(cues) ? cues : [];
+    captionSceneStart = performance.now();
 
     // Defense-in-depth: if the LLM produced a scene with no usable elements,
     // synthesize a title from the narration so we never leak a fully blank
@@ -591,8 +661,12 @@
     paintBg();
 
     if (elements.length === 0) {
-      // Truly empty (no narration even). Hold the empty canvas; logged above.
-      await sleep(timing.durationMs);
+      // Truly empty (no narration even). Hold the canvas; captions (if any)
+      // still advance via the repaint loop.
+      await holdRepaint(timing.durationMs, () => {
+        paintBg();
+        drawCaptionOverlay();
+      });
       return;
     }
 
@@ -610,13 +684,15 @@
       // Fix this element fully painted, advance.
       paintScene(elements, i + 1, 0, byId); // [0..i] all 'prior' = fully drawn
       const isLast = i === elements.length - 1;
-      if (!isLast && stagger > drawDur) await sleep(stagger - drawDur);
+      if (!isLast && stagger > drawDur) {
+        await holdRepaint(stagger - drawDur, () => paintScene(elements, i + 1, 0, byId));
+      }
     }
 
-    // Hold tail: visuals already final; just wait until scene duration is up.
+    // Hold tail: visuals already final; keep repainting so captions advance.
     const usedMs = (elements.length - 1) * Math.max(stagger, drawDur) + drawDur;
     const remaining = Math.max(0, timing.durationMs - usedMs);
-    if (remaining > 0) await sleep(remaining);
+    await holdRepaint(remaining, () => paintScene(elements, elements.length, 0, byId));
   }
 
   async function run() {
@@ -632,11 +708,12 @@
     await sleep(150);
     console.log('[chalkboard] READY');
 
+    const captions = Array.isArray(cfg.captions) ? cfg.captions : [];
     for (let i = 0; i < cfg.script.scenes.length; i++) {
       const scene = cfg.script.scenes[i];
       const timing = cfg.timings[i];
       console.log(`[chalkboard] scene ${i + 1}/${cfg.script.scenes.length}`);
-      await playScene(scene, timing);
+      await playScene(scene, timing, captions[i]);
     }
 
     console.log('[chalkboard] DONE');

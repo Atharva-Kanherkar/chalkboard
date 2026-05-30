@@ -18,6 +18,8 @@ export interface GenerateOptions {
   onProgress?: (event: ProgressEvent) => void;
   /** Don't delete the working directory after render — useful for debugging. */
   keepWorkDir?: boolean;
+  /** Burn per-scene captions into the video. Default: true. */
+  subtitles?: boolean;
 }
 
 export type LLMProviderConfig =

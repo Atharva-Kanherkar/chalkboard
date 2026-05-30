@@ -21,6 +21,7 @@ interface CliFlags {
   workDir?: string;
   keep?: boolean;
   quiet?: boolean;
+  subtitles?: boolean;
 }
 
 const program = new Command();
@@ -44,6 +45,7 @@ program
   .option('--tts-voice <id>', 'TTS voice id')
   .option('--work-dir <path>', 'Working dir (kept around if set)')
   .option('--keep', "Don't clean the working dir")
+  .option('--no-subtitles', 'Disable burned-in captions (on by default)')
   .option('-q, --quiet', 'Suppress progress output')
   .action(async (promptParts: string[], rawFlags: CliFlags) => {
     const prompt = promptParts.join(' ').trim();
@@ -61,6 +63,7 @@ program
       ...(flags.voice ? { voice: flags.voice } : {}),
       ...(flags.workDir ? { workDir: flags.workDir } : {}),
       ...(flags.keep ? { keepWorkDir: true } : {}),
+      ...(flags.subtitles === false ? { subtitles: false } : {}),
       ...(flags.llm ? { llm: buildLLMConfig(flags) } : {}),
       ...(flags.tts ? { tts: buildTTSConfig(flags) } : {}),
       onProgress: flags.quiet ? () => undefined : printProgress,

@@ -65,6 +65,7 @@ export async function muxFinal(input: MuxInput): Promise<string> {
   );
 
   // Final mux. Re-encode video to h264 for portability; audio to aac.
+  // (Captions are drawn onto the canvas during render, so nothing to burn here.)
   await runFfmpeg(
     [
       '-y',

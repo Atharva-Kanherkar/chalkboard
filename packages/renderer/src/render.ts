@@ -17,6 +17,7 @@ import type { SceneScript } from '@chalkboard/shared';
 import { chromium, type Browser, type Page } from 'playwright';
 import { planSceneTiming, type SceneTiming, type AudioInfo } from './timing.js';
 import { expandGraphvizInScript } from './graphviz.js';
+import { planSceneCaptions } from './subtitles.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -28,6 +29,8 @@ export interface RenderInput {
   workDir: string;
   /** Final video file name (no extension). */
   baseName?: string;
+  /** Draw per-scene captions onto the canvas. Default: true. */
+  subtitles?: boolean;
   /** Optional progress hook. */
   onProgress?: (msg: string) => void;
 }
@@ -59,6 +62,15 @@ export async function renderScript(input: RenderInput): Promise<RenderOutput> {
 
   const canvas = canvasFor(script.meta.aspectRatio);
   const pagePath = resolvePagePath();
+
+  // Per-scene caption cues (scene-relative timing), drawn on-canvas by player.js.
+  const captions =
+    input.subtitles === false
+      ? script.scenes.map(() => [])
+      : planSceneCaptions(
+          script.scenes.map((s) => ({ narration: s.narration })),
+          timings,
+        );
 
   input.onProgress?.(`launching headless chromium (${canvas.width}x${canvas.height})`);
 
@@ -95,6 +107,7 @@ export async function renderScript(input: RenderInput): Promise<RenderOutput> {
         script,
         timings,
         canvas,
+        captions,
       },
     );
 

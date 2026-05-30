@@ -84,6 +84,14 @@ Force a provider with `--llm <kind>` or `CHALKBOARD_LLM=stub`.
 | `elevenlabs` | `ELEVENLABS_API_KEY`                                                        |
 | `stub`       | none — emits a sine-wave WAV, for tests                                     |
 
+### Subtitles
+
+Captions are **on by default** and drawn straight onto the canvas during render
+(bottom-center, white with a dark outline), so they're baked into every frame —
+no player support or libass-enabled `ffmpeg` required. They're built from the
+narration and timed per scene. Disable with `--no-subtitles` (CLI) or
+`"subtitles": false` (HTTP body / `GenerateOptions`).
+
 ## Usage
 
 ### CLI

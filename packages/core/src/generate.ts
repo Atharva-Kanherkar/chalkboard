@@ -89,6 +89,7 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       script,
       audioInfo: audioDurations.map((durationMs) => ({ durationMs })),
       workDir,
+      subtitles: opts.subtitles !== false,
       onProgress: (msg) => emit(onProgress, { phase: 'render', message: msg }),
     });
 
