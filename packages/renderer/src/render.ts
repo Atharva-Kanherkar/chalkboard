@@ -210,13 +210,19 @@ async function renderOneScene(input: RenderSceneInput): Promise<string> {
   const out = join(workDir, `${baseName}.scene-${index}.mp4`);
   await runFfmpeg([
     '-y',
-    '-i', raw,
-    '-t', targetSec.toFixed(3),
+    '-i',
+    raw,
+    '-t',
+    targetSec.toFixed(3),
     '-an',
-    '-c:v', 'libx264',
-    '-pix_fmt', 'yuv420p',
-    '-preset', 'veryfast',
-    '-crf', '20',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-preset',
+    'veryfast',
+    '-crf',
+    '20',
     out,
   ]);
   return out;
@@ -247,8 +253,23 @@ async function concatVideos(paths: string[], out: string, workDir: string): Prom
   } catch {
     // Fallback: re-encode if a stream copy can't stitch the timestamps.
     await runFfmpeg([
-      '-y', '-f', 'concat', '-safe', '0', '-i', listFile,
-      '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'veryfast', '-crf', '20', '-an', out,
+      '-y',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      listFile,
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '20',
+      '-an',
+      out,
     ]);
   }
 }

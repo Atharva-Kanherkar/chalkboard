@@ -11,7 +11,7 @@ chosen by the LLM (`meta.mood`) based on the subject, and resolved by
 | ---------- | ------------------------------------------------ |
 | `wonder`   | lush, open, optimistic — science / how-it-works  |
 | `mystery`  | sparse, dark, suspenseful — open questions       |
-| `dramatic` | building, cinematic, weighty — high stakes        |
+| `dramatic` | building, cinematic, weighty — high stakes       |
 | `upbeat`   | bright, moving, energetic — products / tutorials |
 | `calm`     | soft, warm, slow — meditative explainers         |
 
@@ -20,12 +20,13 @@ Override with `--music-mood <mood>` / `musicMood`, supply your own file with
 `--music-source jamendo` (needs `JAMENDO_CLIENT_ID`), or disable music with
 `--no-music` / `"music": false`.
 
-**Provenance & license:** every track is **synthesised from scratch with `sox`
-+ `ffmpeg`** — a sustained chord pad, a plucked arpeggio walking the chord
-tones, and a bass root note per chord, glued with reverb and a gentle low-pass,
-then loudness-normalised. There are **no third-party recordings or samples**, so
-the library carries no upstream licensing obligations and is released as
-**CC0 / public domain** along with the rest of this MIT project.
+**Provenance & license:** every track is \*\*synthesised from scratch with `sox`
+
+- `ffmpeg`** — a sustained chord pad, a plucked arpeggio walking the chord
+  tones, and a bass root note per chord, glued with reverb and a gentle low-pass,
+  then loudness-normalised. There are **no third-party recordings or samples**, so
+  the library carries no upstream licensing obligations and is released as
+  **CC0 / public domain\*\* along with the rest of this MIT project.
 
 Regenerate the whole library (or a single mood) with:
 

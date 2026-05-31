@@ -50,14 +50,7 @@ export interface Scene {
  */
 export type MusicMood = 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none';
 
-export const MUSIC_MOODS: MusicMood[] = [
-  'wonder',
-  'mystery',
-  'dramatic',
-  'upbeat',
-  'calm',
-  'none',
-];
+export const MUSIC_MOODS: MusicMood[] = ['wonder', 'mystery', 'dramatic', 'upbeat', 'calm', 'none'];
 
 export interface SceneScriptMeta {
   /** BCP-47 language tag for narration (e.g. "en", "fr-CA"). */

@@ -63,7 +63,10 @@ program
     '--music-mood <mood>',
     'Music mood: wonder | mystery | dramatic | upbeat | calm | none (default: chosen by the model)',
   )
-  .option('--music-source <src>', 'Music source: bundled (default) | jamendo (needs JAMENDO_CLIENT_ID)')
+  .option(
+    '--music-source <src>',
+    'Music source: bundled (default) | jamendo (needs JAMENDO_CLIENT_ID)',
+  )
   .option('--no-images', 'Disable image generation for image elements (on by default)')
   .option('--image-model <id>', 'Image model id (default gpt-image-2)')
   .option('--image-quality <q>', 'Image quality: low | medium | high | auto (default medium)')

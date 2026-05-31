@@ -133,13 +133,13 @@ and **sidechain-ducked** — the music automatically dips whenever the voice is
 speaking, so narration stays clearly legible (plus a gentle intro swell and
 tail-out fade). The model picks the mood (`meta.mood`) from the subject:
 
-| mood       | feel                                              |
-| ---------- | ------------------------------------------------- |
-| `wonder`   | lush, optimistic — science / how-it-works (default)|
-| `mystery`  | sparse, dark, suspenseful — open questions        |
-| `dramatic` | building, cinematic — high stakes                 |
-| `upbeat`   | bright, energetic — products / tutorials          |
-| `calm`     | soft, slow — meditative explainers                |
+| mood       | feel                                                |
+| ---------- | --------------------------------------------------- |
+| `wonder`   | lush, optimistic — science / how-it-works (default) |
+| `mystery`  | sparse, dark, suspenseful — open questions          |
+| `dramatic` | building, cinematic — high stakes                   |
+| `upbeat`   | bright, energetic — products / tutorials            |
+| `calm`     | soft, slow — meditative explainers                  |
 
 Every bundled track is **original and CC0** — layered chord pad + plucked
 arpeggio + bass, synthesised with `sox`/`ffmpeg` (regenerate via
