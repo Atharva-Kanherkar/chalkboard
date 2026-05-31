@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import type { SynthesizeInput, SynthesizeOutput, TTSProvider } from './provider.js';
-import { openAIInstructions } from './delivery.js';
+import { accentInstruction, openAIInstructions } from './delivery.js';
 
 export interface OpenAITTSProviderOptions {
   apiKey?: string;
@@ -25,9 +25,15 @@ export class OpenAITTSProvider implements TTSProvider {
 
   async synthesize(input: SynthesizeInput): Promise<SynthesizeOutput> {
     // `instructions` only steers the gpt-4o-mini-tts family; harmless to omit.
-    const instructions = this.model.includes('gpt-4o')
-      ? openAIInstructions(input.delivery)
-      : undefined;
+    // Combine language-accent steering (so Hinglish/Hindi sounds native) with
+    // any per-scene delivery direction (emotion/pace).
+    let instructions: string | undefined;
+    if (this.model.includes('gpt-4o')) {
+      const parts = [accentInstruction(input.language), openAIInstructions(input.delivery)].filter(
+        (p): p is string => Boolean(p),
+      );
+      instructions = parts.length ? parts.join(' ') : undefined;
+    }
     const response = await this.client.audio.speech.create({
       model: this.model,
       voice: (input.voice ?? this.voice) as 'alloy',

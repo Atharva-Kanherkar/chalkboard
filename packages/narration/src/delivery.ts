@@ -7,6 +7,21 @@ export interface Delivery {
   pace?: 'slow' | 'normal' | 'fast';
 }
 
+/**
+ * Accent/native-speaker steering derived from the narration language. OpenAI
+ * voices default to a US-English accent, which makes Hindi/Hinglish sound like
+ * "a foreigner reading phonetically"; this instructs a native delivery. Returns
+ * undefined for languages we don't special-case (model auto-detects those).
+ */
+export function accentInstruction(language?: string): string | undefined {
+  if (!language) return undefined;
+  const l = language.toLowerCase();
+  if (/hinglish|hindi|\bhi\b|\bhi-|india|indian|desi|urdu/.test(l)) {
+    return 'Speak as a fluent, native Indian speaker with a natural Indian accent and authentic Hinglish code-switching between Hindi and English — warm, conversational, and at home in the language, never a foreigner sounding out the words phonetically.';
+  }
+  return undefined;
+}
+
 /** Build an OpenAI `gpt-4o-mini-tts` instructions string. Undefined if nothing to say. */
 export function openAIInstructions(d?: Delivery): string | undefined {
   if (!d || (!d.emotion && !d.pace)) return undefined;

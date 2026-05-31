@@ -18,7 +18,7 @@ import { repairScript } from '@chalkboard/whiteboard';
 
 export interface SelfCorrectOptions {
   apiKey?: string;
-  /** Vision-capable model. Default gpt-4o. */
+  /** Vision-capable model. Default gpt-5.5 (override via OPENAI_VISION_MODEL). */
   model?: string;
   /** Max critique passes. Default 1. */
   iterations?: number;
@@ -41,19 +41,23 @@ interface Critique {
 
 const SYSTEM = `You are a layout QA reviewer for whiteboard-style explainer videos on a 1920x1080 canvas (vertical/square use the stated size). You are shown a screenshot of ONE scene's final drawn state plus the JSON elements that produced it.
 
-Find only real, visible problems:
+Your TOP priority is OVERLAPPING / COLLIDING TEXT — be aggressive about it. Look carefully:
+- ANY text glyphs sitting on top of other text, a label, a shape border, or an image so it's hard to read — move or shrink the offending element until there is clear breathing room. This is the #1 thing to fix.
+- text bleeding outside its container box, or two labels whose bounding boxes intersect.
+
+Also flag:
 - elements cut off by or touching the canvas edge (keep everything within 80px of every edge)
-- text drawn on top of other text or shapes so it's unreadable
-- two elements overlapping when they shouldn't
 - the scene reading as empty or nearly empty
 - text too small or low-contrast to read
+
+Be decisive: if anything overlaps even slightly, return ok:false and fix it. Prefer nudging positions and reducing fontSize/maxWidth to create separation over deleting content.
 
 If the scene looks good, return {"ok": true}.
 If NOT, return {"ok": false, "issues": ["..."], "elements": [ ...full corrected elements array... ]}.
 When you return elements: keep the same element ids and types, preserve everything that's fine, and only move/resize/restyle/remove what's broken. Use the same fields the input uses (x, y, width, height, text, fontSize, maxWidth, containerId, from, to, etc.). Do not invent unrelated content. Output JSON only.`;
 
 function visionModel(opts: SelfCorrectOptions): string {
-  return opts.model ?? process.env['OPENAI_VISION_MODEL'] ?? 'gpt-4o';
+  return opts.model ?? process.env['OPENAI_VISION_MODEL'] ?? 'gpt-5.5';
 }
 
 async function critiqueScene(

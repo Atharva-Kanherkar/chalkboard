@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { elevenAudioTagPrefix, openAIInstructions } from './delivery.js';
+import { accentInstruction, elevenAudioTagPrefix, openAIInstructions } from './delivery.js';
+
+describe('accentInstruction', () => {
+  it('steers a native Indian accent for Hindi/Hinglish languages', () => {
+    for (const lang of ['hi', 'Hindi', 'Hinglish (casual mix)', 'indian english']) {
+      expect(accentInstruction(lang)).toMatch(/native Indian/i);
+    }
+  });
+
+  it('is undefined for unspecified or unhandled languages', () => {
+    expect(accentInstruction()).toBeUndefined();
+    expect(accentInstruction('en')).toBeUndefined();
+    expect(accentInstruction('fr')).toBeUndefined();
+  });
+});
 
 describe('openAIInstructions', () => {
   it('is undefined when there is nothing to direct', () => {
