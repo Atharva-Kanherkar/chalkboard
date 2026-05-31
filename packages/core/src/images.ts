@@ -26,6 +26,8 @@ export interface GenerateImagesOptions {
   workDir: string;
   /** Max images generated per video (cost guard). Default 8. */
   max?: number;
+  /** Max concurrent image API calls. Default 4. */
+  concurrency?: number;
   onProgress?: (msg: string) => void;
 }
 
@@ -89,28 +91,35 @@ export async function generateSceneImages(
   const model = opts.model ?? process.env['OPENAI_IMAGE_MODEL'] ?? 'gpt-image-2';
   const quality: ImageQuality = opts.quality ?? 'medium';
   const max = opts.max ?? 8;
+  const concurrency = Math.max(1, Math.min(opts.concurrency ?? 4, max));
 
-  // Cache by prompt so repeated imagery in a video costs one call.
-  const cache = new Map<string, string>();
-  let generated = 0;
-  let usage: TokenUsage = emptyUsage();
-
+  // Dedupe by prompt so repeated imagery in a video costs a single call, then
+  // generate the unique prompts concurrently (image gen is the slowest paid
+  // step and the calls are independent). Cap the number of unique generations.
+  const firstSize = new Map<string, ImageSize>();
+  const uniquePrompts: string[] = [];
   for (const el of targets) {
-    if (generated >= max) {
-      opts.onProgress?.(`image cap (${max}) reached — remaining elements get placeholders`);
-      break;
-    }
     const prompt = (el['prompt'] as string).trim();
-    const cached = cache.get(prompt);
-    if (cached) {
-      el['src'] = cached;
-      continue;
+    if (!firstSize.has(prompt)) {
+      firstSize.set(prompt, sizeFor(el));
+      uniquePrompts.push(prompt);
     }
-
-    const size = sizeFor(el);
+  }
+  const toGenerate = uniquePrompts.slice(0, max);
+  if (uniquePrompts.length > max) {
     opts.onProgress?.(
-      `generating image ${generated + 1}/${Math.min(targets.length, max)} (${size}, ${quality})`,
+      `image cap (${max}) reached — ${uniquePrompts.length - max} unique prompt(s) get placeholders`,
     );
+  }
+
+  const cache = new Map<string, string>();
+  let usage: TokenUsage = emptyUsage();
+  let started = 0;
+
+  const generateOne = async (prompt: string): Promise<void> => {
+    const size = firstSize.get(prompt)!;
+    const n = ++started;
+    opts.onProgress?.(`generating image ${n}/${toGenerate.length} (${size}, ${quality})`);
     try {
       const res = await client.images.generate({
         model,
@@ -121,10 +130,7 @@ export async function generateSceneImages(
       });
       const b64 = res.data?.[0]?.b64_json;
       if (!b64) throw new Error('no image data returned');
-      const dataUrl = `data:image/png;base64,${b64}`;
-      el['src'] = dataUrl;
-      cache.set(prompt, dataUrl);
-      generated += 1;
+      cache.set(prompt, `data:image/png;base64,${b64}`);
       // gpt-image-2 returns token usage; accumulate for the cost estimate.
       const u = res.usage as { input_tokens?: number; output_tokens?: number } | undefined;
       if (u) {
@@ -135,7 +141,7 @@ export async function generateSceneImages(
       }
       // Persist for debugging when the work dir is kept.
       await writeFile(
-        join(opts.workDir, `image-${generated}.png`),
+        join(opts.workDir, `image-${cache.size}.png`),
         Buffer.from(b64, 'base64'),
       ).catch(() => undefined);
     } catch (err) {
@@ -143,11 +149,28 @@ export async function generateSceneImages(
         `image generation failed (${err instanceof Error ? err.message : String(err)}) — placeholder`,
       );
     }
+  };
+
+  // Bounded worker pool over the unique prompts.
+  let cursor = 0;
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const i = cursor++;
+      if (i >= toGenerate.length) return;
+      await generateOne(toGenerate[i]!);
+    }
+  };
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+
+  // Assign generated data URLs back to every element sharing each prompt.
+  for (const el of targets) {
+    const url = cache.get((el['prompt'] as string).trim());
+    if (url) el['src'] = url;
   }
 
   return {
     script,
-    generated,
+    generated: cache.size,
     skippedForNoKey: false,
     usage,
     estCostUsd: estimateImageCostUsd(usage, model),

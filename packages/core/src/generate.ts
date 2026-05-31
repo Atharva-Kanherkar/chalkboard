@@ -140,6 +140,7 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       audioInfo: audioDurations.map((durationMs) => ({ durationMs })),
       workDir,
       subtitles: opts.subtitles !== false,
+      ...(opts.renderConcurrency ? { concurrency: opts.renderConcurrency } : {}),
       onProgress: (msg) => emit(onProgress, { phase: 'render', message: msg }),
     });
 

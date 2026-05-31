@@ -29,6 +29,7 @@ interface CliFlags {
   images?: boolean;
   imageModel?: string;
   imageQuality?: 'low' | 'medium' | 'high' | 'auto';
+  renderConcurrency?: string;
   selfCorrect?: string | boolean;
   short?: boolean;
 }
@@ -66,6 +67,7 @@ program
   .option('--no-images', 'Disable image generation for image elements (on by default)')
   .option('--image-model <id>', 'Image model id (default gpt-image-2)')
   .option('--image-quality <q>', 'Image quality: low | medium | high | auto (default medium)')
+  .option('--render-concurrency <n>', 'Scenes to render in parallel (default: auto, up to 4)')
   .option(
     '--self-correct [passes]',
     'Vision-critique each scene and fix layout before render (needs OPENAI_API_KEY)',
@@ -98,6 +100,9 @@ program
       ...(flags.images === false ? { images: false } : {}),
       ...(flags.imageModel ? { imageModel: flags.imageModel } : {}),
       ...(flags.imageQuality ? { imageQuality: flags.imageQuality } : {}),
+      ...(flags.renderConcurrency && Number.parseInt(flags.renderConcurrency, 10) > 0
+        ? { renderConcurrency: Number.parseInt(flags.renderConcurrency, 10) }
+        : {}),
       ...(flags.selfCorrect ? { selfCorrect: parseSelfCorrect(flags.selfCorrect) } : {}),
       ...(flags.llm ? { llm: buildLLMConfig(flags) } : {}),
       ...(flags.tts ? { tts: buildTTSConfig(flags) } : {}),

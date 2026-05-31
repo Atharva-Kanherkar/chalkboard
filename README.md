@@ -49,6 +49,10 @@ prompt                  → "explain how the universe is aging"
   ffmpeg                → narration + ducked music → final mp4
 ```
 
+Scenes are independent, so the renderer records them in **parallel** browser
+contexts and concatenates — render wall-clock tracks the longest scene, not the
+sum. Image generation runs concurrently too. Tune with `--render-concurrency`.
+
 ## Quickstart
 
 ```bash

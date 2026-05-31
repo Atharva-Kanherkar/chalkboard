@@ -43,6 +43,11 @@ export interface GenerateOptions {
   /** Image quality: 'low' | 'medium' | 'high' | 'auto'. Default 'medium' (cheaper). */
   imageQuality?: 'low' | 'medium' | 'high' | 'auto';
   /**
+   * Max scenes rendered in parallel. Scenes are independent, so this is the
+   * main render-speed knob. Default: CPU-bound, clamped to [1, 4]. 1 = serial.
+   */
+  renderConcurrency?: number;
+  /**
    * Vision self-correction: screenshot each scene and let a vision model fix
    * layout problems before final render. `true` = 1 pass, or pass a count.
    * Needs OPENAI_API_KEY. Default: off (deterministic repair always runs).
