@@ -210,6 +210,114 @@ const SHORT_SCRIPT: SceneScript = {
   ],
 };
 
+// Cinematic ScriptDoc v2: full-frame images, a knowledge-gap arc with per-scene
+// beat/delivery/mood, and claims cited into the sources table. Used by Demo mode
+// and tests so the cinematic lane works without an LLM or research call.
+const CINEMATIC_SCRIPT: SceneScript = {
+  version: '2',
+  meta: {
+    language: 'en',
+    aspectRatio: '16:9',
+    title: 'Stub Cinematic',
+    format: 'cinematic',
+    voices: { narrator: 'default' },
+    mood: 'mystery',
+  },
+  sources: [
+    { id: 's1', url: 'https://example.org/primary', title: 'Primary source' },
+    { id: 's2', url: 'https://example.org/review', title: 'Review article' },
+  ],
+  scenes: [
+    {
+      id: 'cine-1',
+      narration: "You've been told this is simple. It isn't — and the truth is stranger.",
+      beat: 'hook',
+      delivery: { voice: 'narrator', emotion: 'curious, hushed', pace: 'slow' },
+      mood: 'mystery',
+      cites: ['s1'],
+      elements: [
+        {
+          id: 'c1-img',
+          type: 'image',
+          x: 0,
+          y: 0,
+          width: 1920,
+          height: 1080,
+          prompt: 'a vast dark cosmic scene, cinematic, dramatic lighting',
+        },
+        {
+          id: 'c1-t',
+          type: 'text',
+          x: 120,
+          y: 900,
+          text: "Wait — that's not why.",
+          fontSize: 72,
+          fontFamily: 1,
+          strokeColor: '#ffffff',
+        },
+      ],
+    },
+    {
+      id: 'cine-2',
+      narration: 'Here is the mechanism almost no one explains correctly.',
+      beat: 'tension',
+      delivery: { voice: 'narrator', emotion: 'building urgency', pace: 'normal' },
+      mood: 'dramatic',
+      cites: ['s1', 's2'],
+      elements: [
+        {
+          id: 'c2-img',
+          type: 'image',
+          x: 0,
+          y: 0,
+          width: 1920,
+          height: 1080,
+          prompt: 'an intricate diagram glowing against darkness, cinematic',
+        },
+        {
+          id: 'c2-t',
+          type: 'text',
+          x: 120,
+          y: 140,
+          text: 'The real reason',
+          fontSize: 64,
+          fontFamily: 1,
+          strokeColor: '#ffffff',
+        },
+      ],
+    },
+    {
+      id: 'cine-3',
+      narration: "And once you see it, you can't unsee it. That's the beauty of it.",
+      beat: 'payoff',
+      delivery: { voice: 'narrator', emotion: 'warm, resolved', pace: 'slow' },
+      mood: 'wonder',
+      cites: ['s2'],
+      elements: [
+        {
+          id: 'c3-img',
+          type: 'image',
+          x: 0,
+          y: 0,
+          width: 1920,
+          height: 1080,
+          prompt: 'a sweeping hopeful vista at golden hour, cinematic',
+        },
+        {
+          id: 'c3-t',
+          type: 'text',
+          x: 120,
+          y: 900,
+          text: 'Now you see it.',
+          fontSize: 72,
+          fontFamily: 1,
+          strokeColor: '#ffffff',
+        },
+      ],
+    },
+  ],
+};
+
 export class StubLLMProvider implements LLMProvider {
   readonly name = 'stub';
   private readonly script: SceneScript | undefined;
@@ -220,8 +328,14 @@ export class StubLLMProvider implements LLMProvider {
 
   async generateScript(input: ScriptGenerationInput): Promise<SceneScript> {
     // An explicit override always wins; otherwise pick the script that matches
-    // the requested format so Demo mode looks right in both lanes.
-    const base = this.script ?? (input.format === 'short' ? SHORT_SCRIPT : DEFAULT_SCRIPT);
+    // the requested format so Demo mode looks right in every lane.
+    const base =
+      this.script ??
+      (input.format === 'short'
+        ? SHORT_SCRIPT
+        : input.format === 'cinematic'
+          ? CINEMATIC_SCRIPT
+          : DEFAULT_SCRIPT);
     return {
       ...base,
       meta: {

@@ -186,17 +186,90 @@ You are now writing a SHORT, not a lecture. Override the rules above where they 
 
 Produce the vertical short now.`;
 
+export type ScriptFormat = 'explainer' | 'short' | 'cinematic';
+
+/** A research brief handed to the cinematic writer (shape mirrors CitedBrief). */
+export interface ScriptBrief {
+  summary: string;
+  findings: { text: string; cites: string[] }[];
+  sources: { id: string; url: string; title?: string }[];
+}
+
+export const CINEMATIC_ADDENDUM = `
+
+=== CINEMATIC OVERRIDE (research-backed documentary, Veritasium style) ===
+You are now writing a CINEMATIC explainer — a mini-documentary, not a whiteboard
+lecture. Override the whiteboard rules where they conflict:
+
+NARRATIVE ARC. Structure the whole script as a knowledge-gap arc, and tag every
+scene with a "beat":
+  - "hook"   — open by breaking what the viewer assumes ("You've been told X.
+               That's not the whole story.") Create a question you refuse to
+               answer yet. Never open with a definition.
+  - "setup"  — give just enough grounding to feel the gap.
+  - "tension"— deepen the mystery; raise the stakes; "but here's the problem…".
+  - "reveal" — the satisfying answer / mechanism.
+  - "payoff" — the so-what; leave them changed. 6-9 scenes total.
+
+VOICE. Spoken, curious, human — like a smart friend who just learned something
+wild and has to tell you. Short sentences. Use the RESEARCH BRIEF as your factual
+spine; do not invent statistics or quotes.
+
+CITATIONS. For any non-obvious factual claim, set the scene's "cites" to the
+brief source ids (e.g. ["s1","s3"]) that back it. Only use ids that exist in the
+brief. Do NOT write URLs yourself.
+
+DELIVERY. Give each scene a "delivery": { "voice": "narrator", "emotion": "...",
+"pace": "slow|normal|fast" } that fits the beat (hushed/curious on the hook,
+building on tension, warm/resolved on the payoff).
+
+MUSIC. Set a per-scene "mood" (wonder|mystery|dramatic|upbeat|calm) that tracks
+the arc — e.g. mystery on the hook/tension, wonder/dramatic on the reveal.
+
+VISUALS. One FULL-FRAME image per scene: emit a single 'image' element covering
+the whole canvas (x:0, y:0, width=canvas width, height=canvas height) with a
+vivid, cinematic 'prompt', PLUS one short 'text' title/caption overlay (large,
+high-contrast). No busy diagrams; let the image carry the scene.
+
+OUTPUT. Set meta.format = "cinematic" and version = "2".`;
+
 /** System prompt for the requested format. */
-export function systemPromptFor(format?: 'explainer' | 'short'): string {
-  return format === 'short' ? SYSTEM_PROMPT + SHORT_FORM_ADDENDUM : SYSTEM_PROMPT;
+export function systemPromptFor(format?: ScriptFormat): string {
+  if (format === 'short') return SYSTEM_PROMPT + SHORT_FORM_ADDENDUM;
+  if (format === 'cinematic') return SYSTEM_PROMPT + CINEMATIC_ADDENDUM;
+  return SYSTEM_PROMPT;
+}
+
+function formatBrief(brief: ScriptBrief): string {
+  const findings = brief.findings
+    .map((f, i) => `  ${i + 1}. ${f.text}${f.cites.length ? ` [${f.cites.join(', ')}]` : ''}`)
+    .join('\n');
+  const sources = brief.sources
+    .map((s) => `  ${s.id}: ${s.title ? `${s.title} — ` : ''}${s.url}`)
+    .join('\n');
+  return `RESEARCH BRIEF\nSummary: ${brief.summary}\n\nFindings:\n${findings}\n\nSources (cite by id):\n${sources}`;
 }
 
 export function userPromptFor(input: {
   prompt: string;
   language: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
-  format?: 'explainer' | 'short';
+  format?: ScriptFormat;
+  brief?: ScriptBrief;
 }): string {
+  if (input.format === 'cinematic') {
+    return `Topic: ${input.prompt}
+
+Language for narration: ${input.language}
+Aspect ratio: ${input.aspectRatio}
+
+${input.brief ? formatBrief(input.brief) : 'No research brief was provided; rely on well-established knowledge and omit citations.'}
+
+Produce the CINEMATIC ScriptDoc JSON now (version "2", meta.format "cinematic").
+Build the knowledge-gap arc with per-scene beat, delivery, mood, and cites into
+the brief's source ids. One full-frame 'image' element + one short 'text' overlay
+per scene.`;
+  }
   if (input.format === 'short') {
     return `Topic: ${input.prompt}
 

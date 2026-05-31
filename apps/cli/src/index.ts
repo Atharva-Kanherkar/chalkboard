@@ -133,12 +133,20 @@ program
 
 program
   .command('script')
-  .description('Generate just the SceneScript JSON (no render). Useful for prompt iteration.')
+  .description(
+    'Generate just the SceneScript/ScriptDoc JSON (no render). Useful for prompt iteration.',
+  )
   .argument('<prompt...>', 'The topic to explain.')
   .option('-l, --lang <bcp47>', 'Narration language', 'en')
   .option('-a, --aspect <ratio>', 'Aspect ratio', '16:9')
+  .option('--format <fmt>', 'explainer | short | cinematic (cinematic researches first)')
   .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama | stub')
   .option('--llm-model <id>', 'LLM model id')
+  .option(
+    '--research <kind>',
+    'Research provider for cinematic: openai-deep-research | basic | stub',
+  )
+  .option('--depth <level>', 'Research depth: quick | standard | deep')
   .action(async (promptParts: string[], rawFlags) => {
     const prompt = promptParts.join(' ').trim();
     if (!prompt) {
@@ -148,18 +156,51 @@ program
     const flags = rawFlags as {
       lang: string;
       aspect: '16:9' | '9:16' | '1:1';
+      format?: 'explainer' | 'short' | 'cinematic';
       llm?: CliFlags['llm'];
       llmModel?: string;
+      research?: 'openai-deep-research' | 'basic' | 'stub';
+      depth?: 'quick' | 'standard' | 'deep';
     };
-    const { resolveLLMProvider } = await import('@chalkboard/llm');
+    const { resolveLLMProvider, groundScriptInBrief } = await import('@chalkboard/llm');
     const provider = resolveLLMProvider(
       flags.llm ? buildLLMConfig({ ...(flags as unknown as CliFlags), llm: flags.llm }) : undefined,
     );
-    const script = await provider.generateScript({
+
+    // Cinematic: research the topic first, then write a grounded ScriptDoc.
+    let brief;
+    if (flags.format === 'cinematic') {
+      const { resolveResearchProvider } = await import('@chalkboard/research');
+      const research = resolveResearchProvider(
+        flags.research ? { kind: flags.research } : undefined,
+      );
+      const cited = await research.research({
+        topic: prompt,
+        ...(flags.depth ? { depth: flags.depth } : {}),
+        language: flags.lang,
+        onProgress: (m) => console.error(`[research] ${m}`),
+      });
+      brief = {
+        summary: cited.summary,
+        findings: cited.findings.map((f) => ({ text: f.text, cites: f.cites })),
+        sources: cited.sources.map((s) => ({
+          id: s.id,
+          url: s.url,
+          ...(s.title ? { title: s.title } : {}),
+        })),
+      };
+    }
+
+    let script = await provider.generateScript({
       prompt,
       language: flags.lang,
       aspectRatio: flags.aspect,
+      ...(flags.format ? { format: flags.format } : {}),
+      ...(brief ? { brief } : {}),
     });
+    // Ground the script: inject the brief's authoritative sources + drop stray cites.
+    if (brief) script = groundScriptInBrief(script, brief);
+
     console.log(JSON.stringify(script, null, 2));
   });
 

@@ -12,7 +12,22 @@ export const SCENE_SCRIPT_JSON_SCHEMA = {
   additionalProperties: false,
   required: ['version', 'meta', 'scenes'],
   properties: {
-    version: { type: 'string', enum: ['1'] },
+    version: { type: 'string', enum: ['1', '2'] },
+    sources: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'url'],
+        properties: {
+          id: { type: 'string' },
+          url: { type: 'string' },
+          title: { type: 'string' },
+          publisher: { type: 'string' },
+          quote: { type: 'string' },
+        },
+        additionalProperties: true,
+      },
+    },
     meta: {
       type: 'object',
       additionalProperties: false,
@@ -26,6 +41,8 @@ export const SCENE_SCRIPT_JSON_SCHEMA = {
           type: 'string',
           enum: ['wonder', 'mystery', 'dramatic', 'upbeat', 'calm', 'none'],
         },
+        format: { type: 'string', enum: ['explainer', 'short', 'cinematic'] },
+        voices: { type: 'object', additionalProperties: { type: 'string' } },
       },
     },
     scenes: {
@@ -56,6 +73,21 @@ export const SCENE_SCRIPT_JSON_SCHEMA = {
           staggerMs: { type: 'number' },
           drawDurationMs: { type: 'number' },
           holdMs: { type: 'number' },
+          beat: { type: 'string', enum: ['hook', 'setup', 'tension', 'reveal', 'payoff'] },
+          delivery: {
+            type: 'object',
+            properties: {
+              voice: { type: 'string' },
+              emotion: { type: 'string' },
+              pace: { type: 'string', enum: ['slow', 'normal', 'fast'] },
+            },
+            additionalProperties: true,
+          },
+          cites: { type: 'array', items: { type: 'string' } },
+          mood: {
+            type: 'string',
+            enum: ['wonder', 'mystery', 'dramatic', 'upbeat', 'calm', 'none'],
+          },
         },
       },
     },
