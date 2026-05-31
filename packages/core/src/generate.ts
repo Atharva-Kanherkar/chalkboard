@@ -8,7 +8,7 @@
 //
 // Each step is wrapped with progress events so CLI/HTTP can surface state.
 
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { GenerateOptions, ProgressEvent, SceneScript } from '@chalkboard/shared';
@@ -66,9 +66,12 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
   }
 
   // -------- 2. work dir ----------
+  // mkdtemp creates the dir; a caller-supplied --work-dir might not exist yet,
+  // so ensure it before any step writes into it (narration, images, render).
   const workDir = opts.workDir
     ? resolve(opts.workDir)
     : await mkdtemp(join(tmpdir(), 'chalkboard-'));
+  await mkdir(workDir, { recursive: true });
 
   try {
     // -------- 2b. vision self-correction (opt-in) ----------
