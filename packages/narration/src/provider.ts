@@ -2,6 +2,11 @@ export interface SynthesizeInput {
   text: string;
   language: string;
   voice?: string;
+  /**
+   * Delivery direction, mapped per provider (OpenAI `instructions`, ElevenLabs
+   * v3 audio tags). Provider-agnostic so a ScriptDoc's `delivery` flows through.
+   */
+  delivery?: { emotion?: string; pace?: 'slow' | 'normal' | 'fast' };
 }
 
 export interface SynthesizeOutput {

@@ -8,10 +8,16 @@
 //
 // Each step is wrapped with progress events so CLI/HTTP can surface state.
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import type { GenerateOptions, ProgressEvent, SceneScript } from '@chalkboard/shared';
+import { extname, join, resolve } from 'node:path';
+import type {
+  Scene,
+  SceneScriptMeta,
+  GenerateOptions,
+  ProgressEvent,
+  SceneScript,
+} from '@chalkboard/shared';
 import { resolveLLMProvider } from '@chalkboard/llm';
 import { resolveTTSProvider } from '@chalkboard/narration';
 import {
@@ -121,17 +127,26 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
         sceneIndex: i,
         sceneCount: script.scenes.length,
       });
-      const out = await tts.synthesize({
-        text: scene.narration,
-        language: script.meta.language,
-        ...(opts.voice
-          ? { voice: opts.voice }
-          : script.meta.voice
-            ? { voice: script.meta.voice }
-            : {}),
-      });
-      const path = join(workDir, `scene-${i}.${out.format}`);
-      await writeFile(path, out.bytes);
+
+      // Bring-your-own-VO: if the caller supplied an audio file for this scene,
+      // use it verbatim and skip TTS (creator uses their own voice).
+      const byo = opts.narrationAudio?.[i];
+      let path: string;
+      if (byo) {
+        const ext = extname(byo).slice(1) || 'mp3';
+        path = join(workDir, `scene-${i}.${ext}`);
+        await writeFile(path, await readFile(byo));
+      } else {
+        const voice = resolveSceneVoice(scene, script.meta, opts.voice);
+        const out = await tts.synthesize({
+          text: scene.narration,
+          language: script.meta.language,
+          ...(voice ? { voice } : {}),
+          ...(scene.delivery ? { delivery: scene.delivery } : {}),
+        });
+        path = join(workDir, `scene-${i}.${out.format}`);
+        await writeFile(path, out.bytes);
+      }
       audioPaths.push(path);
       audioDurations.push(await probeAudioDuration(path));
     }
@@ -207,4 +222,29 @@ function emit(fn: (e: ProgressEvent) => void, event: ProgressEvent) {
 
 function noop(): void {
   /* no-op */
+}
+
+// Role words a script uses symbolically; never pass these to a TTS as a voice id.
+const VOICE_ROLE_WORDS = new Set(['narrator', 'quote', 'host', 'vo', 'speaker']);
+
+/**
+ * Resolve the concrete voice for a scene:
+ *  1. the scene's delivery role mapped via meta.voices (e.g. narrator → id),
+ *  2. an explicit caller override,
+ *  3. meta.voice,
+ *  4. the role string itself if it looks like a real voice id (not a role word),
+ *  5. otherwise the provider default.
+ */
+function resolveSceneVoice(
+  scene: Scene,
+  meta: SceneScriptMeta,
+  override?: string,
+): string | undefined {
+  const role = scene.delivery?.voice;
+  const mapped = role && meta.voices ? meta.voices[role] : undefined;
+  if (mapped) return mapped;
+  if (override) return override;
+  if (meta.voice) return meta.voice;
+  if (role && !VOICE_ROLE_WORDS.has(role.toLowerCase())) return role;
+  return undefined;
 }

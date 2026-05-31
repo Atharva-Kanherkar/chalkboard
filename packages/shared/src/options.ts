@@ -6,6 +6,12 @@ export interface GenerateOptions {
   language?: string;
   /** Voice id for the chosen TTS provider. */
   voice?: string;
+  /**
+   * Bring-your-own narration: audio file paths aligned by scene index. When an
+   * entry is present, that scene uses the file verbatim instead of TTS — so a
+   * creator can drop in their own voice while keeping AI visuals/music.
+   */
+  narrationAudio?: (string | undefined)[];
   /** Aspect ratio of the final video. */
   aspectRatio?: '16:9' | '9:16' | '1:1';
   /** 'short' = hook-first vertical reel (defaults aspect to 9:16). Default 'explainer'. */
