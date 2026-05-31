@@ -57,7 +57,7 @@ program
   .option('--no-music', 'Disable background music (on by default)')
   .option('--music-track <path>', 'Custom background music file (defaults to bundled loop)')
   .option('--no-images', 'Disable image generation for image elements (on by default)')
-  .option('--image-model <id>', 'Image model id (default gpt-image-1)')
+  .option('--image-model <id>', 'Image model id (default gpt-image-2)')
   .option('--image-quality <q>', 'Image quality: low | medium | high | auto (default medium)')
   .option(
     '--self-correct [passes]',

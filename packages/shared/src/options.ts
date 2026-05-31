@@ -28,7 +28,7 @@ export interface GenerateOptions {
   musicTrack?: string;
   /** Generate real imagery for `image` elements (needs OPENAI_API_KEY). Default: true. */
   images?: boolean;
-  /** Override the image model (default `gpt-image-1`). */
+  /** Override the image model (default `gpt-image-2`). */
   imageModel?: string;
   /** Image quality: 'low' | 'medium' | 'high' | 'auto'. Default 'medium' (cheaper). */
   imageQuality?: 'low' | 'medium' | 'high' | 'auto';

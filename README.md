@@ -30,7 +30,7 @@ cost per video can be zero. MIT-licensed: yours to fork, embed, and bill for.
 
 - **Any provider** — Anthropic, OpenAI, or fully local Ollama for the script; Piper, OpenAI, or ElevenLabs for narration.
 - **Hand-drawn diagrams** — a RoughJS sketch aesthetic, with Graphviz auto-layout for graphs, trees, linked lists, and state machines.
-- **Real images** — `image` elements are generated with `gpt-image-1` for visual and science topics (stars, cells, maps), not just boxes and arrows.
+- **Real images** — `image` elements are generated with `gpt-image-2` (sharp, accurate in-image text for labels and charts) for visual and science topics (stars, cells, maps), not just boxes and arrows.
 - **Vector art** — built-in SVG motifs and custom inline SVG, at zero API cost.
 - **Subtitles** — burned into every frame, with no player or libass dependency.
 - **Background music** — a CC0 bed, sidechain-ducked under the narration so the voice stays clear.
@@ -43,7 +43,7 @@ cost per video can be zero. MIT-licensed: yours to fork, embed, and bill for.
 prompt                  → "explain how the universe is aging"
   llm (any provider)    → SceneScript JSON
   layout repair         → clamp / de-overlap / (optional) vision fix
-  image gen             → gpt-image-1 for image elements
+  image gen             → gpt-image-2 for image elements
   tts (any provider)    → narration per scene
   renderer (Playwright) → canvas video + burned-in captions
   ffmpeg                → narration + ducked music → final mp4
@@ -135,8 +135,9 @@ Disable with `--no-music` / `"music": false`, or supply your own track with
 
 For visual/real-world topics (astronomy, biology, geography…), the model can
 emit `image` elements with a `prompt`, and chalkboard generates real imagery for
-them with OpenAI's **`gpt-image-1`** and draws it (cover-fit, rounded corners)
-into the box. Needs `OPENAI_API_KEY`; **each image costs money**, so generation
+them with OpenAI's **`gpt-image-2`** (crisp, accurate in-image text for labels,
+charts and diagrams) and draws it (cover-fit, rounded corners) into the box.
+Needs `OPENAI_API_KEY`; **each image costs money**, so generation
 is cached per prompt and capped per video. Disable with `--no-images` /
 `"images": false` (image elements then render as neutral placeholders). Override
 the model with `--image-model <id>`.

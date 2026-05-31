@@ -1,4 +1,4 @@
-// Generate real imagery for `image` elements via OpenAI's gpt-image-1, so
+// Generate real imagery for `image` elements via OpenAI's gpt-image-2, so
 // visual topics ("how the universe is aging") get actual stars/galaxies instead
 // of empty hand-drawn boxes.
 //
@@ -21,7 +21,7 @@ export type ImageQuality = 'low' | 'medium' | 'high' | 'auto';
 export interface GenerateImagesOptions {
   apiKey?: string;
   model?: string;
-  /** gpt-image-1 quality. Default 'medium' — ~4x cheaper than 'high'/'auto'. */
+  /** Image quality. Default 'medium' — cheaper than 'high'/'auto'. */
   quality?: ImageQuality;
   workDir: string;
   /** Max images generated per video (cost guard). Default 8. */
@@ -86,7 +86,7 @@ export async function generateSceneImages(
   }
 
   const client = new OpenAI({ apiKey });
-  const model = opts.model ?? process.env['OPENAI_IMAGE_MODEL'] ?? 'gpt-image-1';
+  const model = opts.model ?? process.env['OPENAI_IMAGE_MODEL'] ?? 'gpt-image-2';
   const quality: ImageQuality = opts.quality ?? 'medium';
   const max = opts.max ?? 8;
 
@@ -125,7 +125,7 @@ export async function generateSceneImages(
       el['src'] = dataUrl;
       cache.set(prompt, dataUrl);
       generated += 1;
-      // gpt-image-1 returns token usage; accumulate for the cost estimate.
+      // gpt-image-2 returns token usage; accumulate for the cost estimate.
       const u = res.usage as { input_tokens?: number; output_tokens?: number } | undefined;
       if (u) {
         usage = addUsage(usage, {
@@ -150,12 +150,15 @@ export async function generateSceneImages(
     generated,
     skippedForNoKey: false,
     usage,
-    estCostUsd: estimateImageCostUsd(usage),
+    estCostUsd: estimateImageCostUsd(usage, model),
   };
 }
 
 // Nudge the model toward clean, on-topic illustration that composes well on a
-// whiteboard rather than busy stock photography.
+// whiteboard rather than busy stock photography. gpt-image-2 renders text
+// accurately, so we no longer blanket-forbid it: labels/callouts are allowed
+// when the prompt asks for them, but we still suppress gratuitous captions and
+// watermarks so plain illustrations stay clean.
 function stylePrompt(prompt: string): string {
-  return `${prompt}. Clean modern illustration, clear subject, simple uncluttered background, suitable as a diagram inset in an explainer video. No text, no watermarks, no borders.`;
+  return `${prompt}. Clean modern illustration, clear subject, simple uncluttered background, suitable as a diagram inset in an explainer video. Only include text if it is part of the requested subject (labels, a chart, a diagram); otherwise no text. No watermarks, no signatures, no borders.`;
 }
