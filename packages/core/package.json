@@ -20,6 +20,7 @@
     "@chalkboard/llm": "workspace:*",
     "@chalkboard/narration": "workspace:*",
     "@chalkboard/renderer": "workspace:*",
+    "@chalkboard/research": "workspace:*",
     "@chalkboard/shared": "workspace:*",
     "@chalkboard/whiteboard": "workspace:*",
     "openai": "^4.77.0"

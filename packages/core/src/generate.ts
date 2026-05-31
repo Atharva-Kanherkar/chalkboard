@@ -18,8 +18,9 @@ import type {
   ProgressEvent,
   SceneScript,
 } from '@chalkboard/shared';
-import { resolveLLMProvider } from '@chalkboard/llm';
+import { resolveLLMProvider, groundScriptInBrief, type ScriptBrief } from '@chalkboard/llm';
 import { resolveTTSProvider } from '@chalkboard/narration';
+import { resolveResearchProvider } from '@chalkboard/research';
 import {
   renderScript,
   muxFinal,
@@ -50,9 +51,39 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
   const llm = resolveLLMProvider(opts.llm);
   const tts = resolveTTSProvider(opts.tts);
 
+  // -------- 0. research (cinematic only) ----------
+  // For cinematic, research the topic into a grounded brief first; the script
+  // is written from it and cited back to real sources.
+  let brief: ScriptBrief | undefined;
+  if (format === 'cinematic') {
+    emit(onProgress, { phase: 'script', message: 'researching topic' });
+    const research = resolveResearchProvider(opts.research ? { kind: opts.research } : undefined);
+    const cited = await research.research({
+      topic: opts.prompt,
+      ...(opts.researchDepth ? { depth: opts.researchDepth } : {}),
+      language,
+      onProgress: (m) => emit(onProgress, { phase: 'script', message: `[research] ${m}` }),
+    });
+    brief = {
+      summary: cited.summary,
+      findings: cited.findings.map((f) => ({ text: f.text, cites: f.cites })),
+      sources: cited.sources.map((s) => ({
+        id: s.id,
+        url: s.url,
+        ...(s.title ? { title: s.title } : {}),
+      })),
+    };
+  }
+
   // -------- 1. script ----------
   emit(onProgress, { phase: 'script', message: `generating script via ${llm.name}` });
-  const raw = await llm.generateScript({ prompt: opts.prompt, language, aspectRatio, format });
+  const raw = await llm.generateScript({
+    prompt: opts.prompt,
+    language,
+    aspectRatio,
+    format,
+    ...(brief ? { brief } : {}),
+  });
   emit(onProgress, {
     phase: 'script',
     message: `script ready (${raw.scenes.length} scenes)`,
@@ -60,15 +91,22 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
 
   // -------- 1b. deterministic layout repair ----------
   // Clamp overflowing elements, de-dupe stacked text, separate overlaps — so
-  // every provider's output is corrected, not just well-prompted ones.
-  const { script: repaired, report } = repairScript(raw);
-  let script = repaired;
-  const fixes = report.clamped + report.scaled + report.dedupedText + report.movedOverlaps;
-  if (fixes > 0) {
-    emit(onProgress, {
-      phase: 'script',
-      message: `layout repaired (clamp ${report.clamped}, scale ${report.scaled}, dedupe ${report.dedupedText}, overlap ${report.movedOverlaps})`,
-    });
+  // every provider's output is corrected, not just well-prompted ones. Skipped
+  // for cinematic, whose full-frame images intentionally fill the canvas.
+  let script: SceneScript;
+  if (format === 'cinematic') {
+    // Ground the cited script in the brief's authoritative sources.
+    script = brief ? groundScriptInBrief(raw, brief) : raw;
+  } else {
+    const { script: repaired, report } = repairScript(raw);
+    script = repaired;
+    const fixes = report.clamped + report.scaled + report.dedupedText + report.movedOverlaps;
+    if (fixes > 0) {
+      emit(onProgress, {
+        phase: 'script',
+        message: `layout repaired (clamp ${report.clamped}, scale ${report.scaled}, dedupe ${report.dedupedText}, overlap ${report.movedOverlaps})`,
+      });
+    }
   }
 
   // -------- 2. work dir ----------

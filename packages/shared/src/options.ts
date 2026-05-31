@@ -14,8 +14,16 @@ export interface GenerateOptions {
   narrationAudio?: (string | undefined)[];
   /** Aspect ratio of the final video. */
   aspectRatio?: '16:9' | '9:16' | '1:1';
-  /** 'short' = hook-first vertical reel (defaults aspect to 9:16). Default 'explainer'. */
-  format?: 'explainer' | 'short';
+  /**
+   * 'short' = hook-first vertical reel (defaults aspect to 9:16); 'cinematic' =
+   * research-backed full-frame documentary (researches the topic first, then
+   * renders full-frame imagery with Ken Burns motion). Default 'explainer'.
+   */
+  format?: 'explainer' | 'short' | 'cinematic';
+  /** Research provider for `cinematic`. Default: auto (deep-research if key, else basic). */
+  research?: 'openai-deep-research' | 'basic' | 'stub';
+  /** Research depth for `cinematic`: 'quick' | 'standard' | 'deep'. */
+  researchDepth?: 'quick' | 'standard' | 'deep';
   /** LLM provider override. */
   llm?: LLMProviderConfig;
   /** TTS provider override. */

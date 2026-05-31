@@ -800,7 +800,118 @@
     return rafLoop(ms, () => paintFn());
   }
 
+  // ---- Cinematic mode: full-frame Ken Burns image + kinetic text + dip fades ----
+
+  function hashSeed(str) {
+    let h = 2166136261;
+    const s = String(str);
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h;
+  }
+
+  // Draw a decoded image full-frame (cover) with a slow Ken Burns zoom + pan
+  // driven by scene progress p in [0,1]. `seed` varies the pan direction.
+  function drawKenBurns(img, p, seed) {
+    const W = canvas.width;
+    const H = canvas.height;
+    if (!img || !img.width || !img.height) {
+      ctx.fillStyle = '#0b0b0f';
+      ctx.fillRect(0, 0, W, H);
+      return;
+    }
+    const base = Math.max(W / img.width, H / img.height);
+    const scale = base * (1.06 + 0.12 * p); // gentle push-in across the scene
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    const dirX = seed & 1 ? 1 : -1;
+    const dirY = seed & 2 ? 1 : -1;
+    const dx = (W - dw) / 2 + dirX * (dw - W) * 0.12 * (p - 0.5);
+    const dy = (H - dh) / 2 + dirY * (dh - H) * 0.08 * (p - 0.5);
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
+  // Bottom scrim so white titles/captions read over any image.
+  function drawScrim() {
+    const W = canvas.width;
+    const H = canvas.height;
+    const g = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,0.7)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, H * 0.5, W, H * 0.5);
+  }
+
+  // Large cinematic overlay text with a soft drop shadow, wrapped to the frame.
+  function drawCinematicText(el) {
+    if (!el || typeof el.text !== 'string' || !el.text.trim()) return;
+    const W = canvas.width;
+    const fontSize = typeof el.fontSize === 'number' ? el.fontSize : 64;
+    ctx.save();
+    ctx.font = `bold ${fontSize}px ${familyFor(el)}`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = el.strokeColor && el.strokeColor !== '#1e1e1e' ? el.strokeColor : '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur = 18;
+    ctx.shadowOffsetY = 2;
+    const lines = wrapLine(el.text, W * 0.84);
+    const lh = fontSize * 1.2;
+    const x = typeof el.x === 'number' ? el.x : Math.round(W * 0.08);
+    let y = typeof el.y === 'number' ? el.y : Math.round(canvas.height * 0.82);
+    for (const line of lines) {
+      ctx.fillText(line, x, y);
+      y += lh;
+    }
+    ctx.restore();
+  }
+
+  async function playCinematicScene(scene, timing, cues) {
+    let elements = Array.isArray(scene.elements) ? scene.elements : [];
+    captionCues = Array.isArray(cues) ? cues : [];
+    captionSceneStart = performance.now();
+    if (!hasRenderableContent(elements)) elements = synthesizeNarrationFallback(scene);
+
+    const imageEl = elements.find((e) => e && e.type === 'image');
+    const overlays = elements.filter((e) => e && e.type !== 'image');
+    const seed = hashSeed(scene.id || 'scene');
+    const dur = Math.max(1, timing.durationMs);
+    const fadeFrac = Math.min(0.16, 600 / dur); // ~0.6s dip in & out
+
+    await rafLoop(dur, (p) => {
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, W, H);
+
+      // Dip-to-black at the scene edges — a sync-safe transition (entirely
+      // within this clip's own timing, so concatenation stays aligned).
+      let sceneAlpha = 1;
+      if (p < fadeFrac) sceneAlpha = p / fadeFrac;
+      else if (p > 1 - fadeFrac) sceneAlpha = (1 - p) / fadeFrac;
+      sceneAlpha = Math.max(0, Math.min(1, sceneAlpha));
+
+      ctx.globalAlpha = sceneAlpha;
+      drawKenBurns(imageEl ? imageCache[imageEl.id] : null, p, seed);
+      drawScrim();
+
+      // Overlay text eases in over the first ~20% of the scene.
+      ctx.globalAlpha = sceneAlpha * Math.min(1, p / 0.2);
+      for (const el of overlays) drawCinematicText(el);
+      ctx.globalAlpha = 1;
+
+      drawCaptionOverlay();
+    });
+  }
+
   async function playScene(scene, timing, cues) {
+    // Cinematic format gets a full-frame, motion-driven treatment.
+    if (cfg.script && cfg.script.meta && cfg.script.meta.format === 'cinematic') {
+      return playCinematicScene(scene, timing, cues);
+    }
+
     let elements = Array.isArray(scene.elements) ? scene.elements : [];
 
     // Arm captions for this scene; the overlay reads these on every paint.

@@ -32,6 +32,9 @@ interface CliFlags {
   renderConcurrency?: string;
   selfCorrect?: string | boolean;
   short?: boolean;
+  cinematic?: boolean;
+  research?: 'openai-deep-research' | 'basic' | 'stub';
+  depth?: 'quick' | 'standard' | 'deep';
 }
 
 const program = new Command();
@@ -48,6 +51,12 @@ program
   .option('-l, --lang <bcp47>', 'Narration language (e.g. en, fr, es)', 'en')
   .option('-a, --aspect <ratio>', 'Aspect ratio: 16:9, 9:16, 1:1', '16:9')
   .option('--short', 'Vertical hook-first reel (defaults aspect to 9:16)')
+  .option('--cinematic', 'Research-backed full-frame documentary (Ken Burns + emotional VO)')
+  .option(
+    '--research <kind>',
+    'Research provider for --cinematic: openai-deep-research | basic | stub',
+  )
+  .option('--depth <level>', 'Research depth for --cinematic: quick | standard | deep')
   .option('--voice <id>', 'Voice id (provider-specific)')
   .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama | stub')
   .option('--llm-model <id>', 'LLM model id')
@@ -91,7 +100,9 @@ program
       outputPath: flags.output,
       language: flags.lang,
       aspectRatio,
-      ...(flags.short ? { format: 'short' } : {}),
+      ...(flags.cinematic ? { format: 'cinematic' } : flags.short ? { format: 'short' } : {}),
+      ...(flags.research ? { research: flags.research } : {}),
+      ...(flags.depth ? { researchDepth: flags.depth } : {}),
       ...(flags.voice ? { voice: flags.voice } : {}),
       ...(flags.workDir ? { workDir: flags.workDir } : {}),
       ...(flags.keep ? { keepWorkDir: true } : {}),
