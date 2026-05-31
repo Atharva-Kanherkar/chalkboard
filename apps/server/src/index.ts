@@ -51,6 +51,15 @@ app.post('/generate', async (c) => {
   const tts = parseTTSProvider(body['tts']);
   const subtitles = body['subtitles'] === false ? false : undefined;
   const music = body['music'] === false ? false : undefined;
+  const MOODS = ['wonder', 'mystery', 'dramatic', 'upbeat', 'calm', 'none'];
+  const musicMood =
+    typeof body['musicMood'] === 'string' && MOODS.includes(body['musicMood'])
+      ? (body['musicMood'] as 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none')
+      : undefined;
+  const musicSource =
+    body['musicSource'] === 'jamendo' || body['musicSource'] === 'bundled'
+      ? (body['musicSource'] as 'bundled' | 'jamendo')
+      : undefined;
   const images = body['images'] === false ? false : undefined;
   const imageQuality =
     body['imageQuality'] === 'low' ||
@@ -76,6 +85,8 @@ app.post('/generate', async (c) => {
     ...(tts ? { tts } : {}),
     ...(subtitles === false ? { subtitles: false } : {}),
     ...(music === false ? { music: false } : {}),
+    ...(musicMood ? { musicMood } : {}),
+    ...(musicSource ? { musicSource } : {}),
     ...(images === false ? { images: false } : {}),
     ...(imageQuality ? { imageQuality } : {}),
     ...(selfCorrect ? { selfCorrect } : {}),

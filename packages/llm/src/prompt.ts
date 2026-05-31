@@ -13,12 +13,22 @@ Output ONLY a JSON object (no prose, no markdown fences) of this exact shape:
 
 {
   "version": "1",
-  "meta": { "language": "<bcp-47>", "aspectRatio": "16:9", "title": "<short>" },
+  "meta": { "language": "<bcp-47>", "aspectRatio": "16:9", "title": "<short>", "mood": "<mood>" },
   "scenes": [
     { "id": "scene-1", "narration": "...", "elements": [ ... ] },
     ...
   ]
 }
+
+meta.mood picks the background music. Choose the ONE that best fits the
+subject and tone:
+- "wonder"   — science, space, "how it works", awe and discovery (default).
+- "mystery"  — open questions, paradoxes, suspense, "what if", the unknown.
+- "dramatic" — high stakes, scale, history, "this changed everything".
+- "upbeat"   — products, tutorials, fun/light topics, energetic pacing.
+- "calm"     — gentle, meditative, slow and soothing explainers.
+- "none"     — only if music would be inappropriate.
+When unsure, use "wonder".
 
 ## Voice (the most important rule)
 

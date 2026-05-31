@@ -47,9 +47,15 @@ export interface MuxInput {
   onProgress?: (msg: string) => void;
 }
 
-/** Resolve the bundled ambient loop, looking in both dist/ and src/ layouts. */
+/**
+ * Resolve a bundled fallback track, looking in both dist/ and src/ layouts.
+ * Prefers the mood-matched library (defaulting to "wonder"); falls back to the
+ * legacy ambient loop if the library is missing.
+ */
 export function bundledMusicPath(): string | null {
   const candidates = [
+    resolve(__dirname, '../assets/music/wonder.mp3'),
+    resolve(__dirname, '../../assets/music/wonder.mp3'),
     resolve(__dirname, '../assets/ambient-loop.mp3'),
     resolve(__dirname, '../../assets/ambient-loop.mp3'),
   ];
@@ -123,9 +129,14 @@ export async function muxFinal(input: MuxInput): Promise<string> {
     // Loop the music (-stream_loop) under the voice. sidechaincompress ducks
     // the music whenever the voice is present; amix(normalize=0) keeps the
     // voice at full level; alimiter guards against the summed peak clipping.
-    const gain = clamp01(input.music?.gain ?? 0.5);
+    // afade gives the bed a gentle intro swell and a graceful tail-out so it
+    // doesn't start/stop abruptly.
+    const gain = clamp01(input.music?.gain ?? 0.45);
+    const totalSec = timings.reduce((s, t) => s + t.durationMs, 0) / 1000;
+    const fadeOutStart = Math.max(0, totalSec - 2.5).toFixed(3);
     const filter =
-      `[2:a]volume=${gain.toFixed(3)},aformat=sample_rates=44100:channel_layouts=stereo[mraw];` +
+      `[2:a]volume=${gain.toFixed(3)},aformat=sample_rates=44100:channel_layouts=stereo,` +
+      `afade=t=in:st=0:d=1.5,afade=t=out:st=${fadeOutStart}:d=2.5[mraw];` +
       `[mraw][1:a]sidechaincompress=threshold=0.03:ratio=6:attack=10:release=350[mduck];` +
       `[1:a][mduck]amix=inputs=2:duration=first:normalize=0,alimiter=limit=0.95[aout]`;
     input.onProgress?.('mixing background music (ducked under narration)');

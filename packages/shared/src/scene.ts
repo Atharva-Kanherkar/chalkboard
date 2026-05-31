@@ -43,6 +43,22 @@ export interface Scene {
   holdMs?: number;
 }
 
+/**
+ * Musical mood of a video, used to pick a background track. The LLM sets this
+ * based on the subject (e.g. a black-hole explainer → "mystery", a how-it-works
+ * → "wonder"). 'none' suppresses music entirely.
+ */
+export type MusicMood = 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none';
+
+export const MUSIC_MOODS: MusicMood[] = [
+  'wonder',
+  'mystery',
+  'dramatic',
+  'upbeat',
+  'calm',
+  'none',
+];
+
 export interface SceneScriptMeta {
   /** BCP-47 language tag for narration (e.g. "en", "fr-CA"). */
   language: string;
@@ -52,6 +68,8 @@ export interface SceneScriptMeta {
   aspectRatio: '16:9' | '9:16' | '1:1';
   /** Title for the video (used in file names, metadata). */
   title?: string;
+  /** Musical mood for the background track. Default 'wonder'. */
+  mood?: MusicMood;
 }
 
 export interface SceneScript {
@@ -70,6 +88,7 @@ export function emptyScript(meta: Partial<SceneScriptMeta> = {}): SceneScript {
       aspectRatio: meta.aspectRatio ?? '16:9',
       ...(meta.voice ? { voice: meta.voice } : {}),
       ...(meta.title ? { title: meta.title } : {}),
+      ...(meta.mood ? { mood: meta.mood } : {}),
     },
     scenes: [],
   };

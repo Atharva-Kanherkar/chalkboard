@@ -24,6 +24,8 @@ interface CliFlags {
   subtitles?: boolean;
   music?: boolean;
   musicTrack?: string;
+  musicMood?: 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none';
+  musicSource?: 'bundled' | 'jamendo';
   images?: boolean;
   imageModel?: string;
   imageQuality?: 'low' | 'medium' | 'high' | 'auto';
@@ -55,7 +57,12 @@ program
   .option('--keep', "Don't clean the working dir")
   .option('--no-subtitles', 'Disable burned-in captions (on by default)')
   .option('--no-music', 'Disable background music (on by default)')
-  .option('--music-track <path>', 'Custom background music file (defaults to bundled loop)')
+  .option('--music-track <path>', 'Custom background music file (overrides the mood track)')
+  .option(
+    '--music-mood <mood>',
+    'Music mood: wonder | mystery | dramatic | upbeat | calm | none (default: chosen by the model)',
+  )
+  .option('--music-source <src>', 'Music source: bundled (default) | jamendo (needs JAMENDO_CLIENT_ID)')
   .option('--no-images', 'Disable image generation for image elements (on by default)')
   .option('--image-model <id>', 'Image model id (default gpt-image-2)')
   .option('--image-quality <q>', 'Image quality: low | medium | high | auto (default medium)')
@@ -86,6 +93,8 @@ program
       ...(flags.subtitles === false ? { subtitles: false } : {}),
       ...(flags.music === false ? { music: false } : {}),
       ...(flags.musicTrack ? { musicTrack: flags.musicTrack } : {}),
+      ...(flags.musicMood ? { musicMood: flags.musicMood } : {}),
+      ...(flags.musicSource ? { musicSource: flags.musicSource } : {}),
       ...(flags.images === false ? { images: false } : {}),
       ...(flags.imageModel ? { imageModel: flags.imageModel } : {}),
       ...(flags.imageQuality ? { imageQuality: flags.imageQuality } : {}),
@@ -99,6 +108,12 @@ program
       const result = await generate(opts);
       if (!flags.quiet) {
         console.error(`\n✓ wrote ${result.outputPath}`);
+        if (result.music) {
+          console.error(
+            `  music: ${result.music.mood} (${result.music.source})` +
+              (result.music.attribution ? ` — ${result.music.attribution}` : ''),
+          );
+        }
       } else {
         console.log(result.outputPath);
       }

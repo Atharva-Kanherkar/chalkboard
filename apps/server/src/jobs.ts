@@ -84,6 +84,8 @@ export interface RunJobInput {
   tts?: TTSProviderConfig;
   subtitles?: boolean;
   music?: boolean;
+  musicMood?: 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none';
+  musicSource?: 'bundled' | 'jamendo';
   images?: boolean;
   imageQuality?: 'low' | 'medium' | 'high' | 'auto';
   selfCorrect?: boolean | number;
@@ -110,6 +112,8 @@ export async function runJob(
     ...(input.tts ? { tts: input.tts } : {}),
     ...(input.subtitles === false ? { subtitles: false } : {}),
     ...(input.music === false ? { music: false } : {}),
+    ...(input.musicMood ? { musicMood: input.musicMood } : {}),
+    ...(input.musicSource ? { musicSource: input.musicSource } : {}),
     ...(input.images === false ? { images: false } : {}),
     ...(input.imageQuality ? { imageQuality: input.imageQuality } : {}),
     ...(input.selfCorrect ? { selfCorrect: input.selfCorrect } : {}),

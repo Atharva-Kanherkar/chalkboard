@@ -18,6 +18,8 @@ coverage/
 *.wav
 !examples/**/*.mp4
 !examples/**/*.mp3
+# Bundled, original CC0 music library (synthesised by scripts/build-music.mjs).
+!packages/renderer/assets/music/*.mp3
 !packages/renderer/assets/*.mp3
 
 # secrets

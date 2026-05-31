@@ -22,6 +22,10 @@ export const SCENE_SCRIPT_JSON_SCHEMA = {
         aspectRatio: { type: 'string', enum: ['16:9', '9:16', '1:1'] },
         title: { type: 'string' },
         voice: { type: 'string' },
+        mood: {
+          type: 'string',
+          enum: ['wonder', 'mystery', 'dramatic', 'upbeat', 'calm', 'none'],
+        },
       },
     },
     scenes: {

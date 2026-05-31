@@ -24,8 +24,18 @@ export interface GenerateOptions {
   subtitles?: boolean;
   /** Mix background music (ducked under narration) into the video. Default: true. */
   music?: boolean;
-  /** Custom background music track. Defaults to the bundled CC0 ambient loop. */
+  /** Custom background music track. Overrides the mood-matched bundled track. */
   musicTrack?: string;
+  /**
+   * Mood for the background track. Defaults to the LLM's `meta.mood` (or
+   * 'wonder'). 'none' disables music. One of:
+   * 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none'.
+   */
+  musicMood?: 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none';
+  /** Where to source music: 'bundled' (default, offline CC0) or 'jamendo'. */
+  musicSource?: 'bundled' | 'jamendo';
+  /** Jamendo client id for `musicSource: 'jamendo'` (else JAMENDO_CLIENT_ID). */
+  jamendoClientId?: string;
   /** Generate real imagery for `image` elements (needs OPENAI_API_KEY). Default: true. */
   images?: boolean;
   /** Override the image model (default `gpt-image-2`). */

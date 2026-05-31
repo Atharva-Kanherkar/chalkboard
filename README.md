@@ -33,7 +33,7 @@ cost per video can be zero. MIT-licensed: yours to fork, embed, and bill for.
 - **Real images** — `image` elements are generated with `gpt-image-2` (sharp, accurate in-image text for labels and charts) for visual and science topics (stars, cells, maps), not just boxes and arrows.
 - **Vector art** — built-in SVG motifs and custom inline SVG, at zero API cost.
 - **Subtitles** — burned into every frame, with no player or libass dependency.
-- **Background music** — a CC0 bed, sidechain-ducked under the narration so the voice stays clear.
+- **Background music** — mood-matched, original CC0 beds (or the real Jamendo catalogue), sidechain-ducked under the narration so the voice stays clear.
 - **Self-correcting** — a deterministic layout pass plus an optional vision-model critique that fixes overflow, overlap, and contrast before the final render.
 - **$0 local** — Ollama + Piper means zero marginal cost per video; self-host the whole pipeline.
 
@@ -124,12 +124,29 @@ narration and timed per scene. Disable with `--no-subtitles` (CLI) or
 
 ### Background music
 
-A subtle music bed is **on by default**, looped under the narration and
-**sidechain-ducked** — the music automatically dips ~10 dB whenever the voice is
-speaking, so narration stays clearly legible. The bundled loop is CC0 (an
-original ffmpeg-synthesized ambient pad — see `packages/renderer/assets/`).
-Disable with `--no-music` / `"music": false`, or supply your own track with
-`--music-track <path>` / `"musicTrack": "<path>"`.
+A **mood-matched** music bed is **on by default**, looped under the narration
+and **sidechain-ducked** — the music automatically dips whenever the voice is
+speaking, so narration stays clearly legible (plus a gentle intro swell and
+tail-out fade). The model picks the mood (`meta.mood`) from the subject:
+
+| mood       | feel                                              |
+| ---------- | ------------------------------------------------- |
+| `wonder`   | lush, optimistic — science / how-it-works (default)|
+| `mystery`  | sparse, dark, suspenseful — open questions        |
+| `dramatic` | building, cinematic — high stakes                 |
+| `upbeat`   | bright, energetic — products / tutorials          |
+| `calm`     | soft, slow — meditative explainers                |
+
+Every bundled track is **original and CC0** — layered chord pad + plucked
+arpeggio + bass, synthesised with `sox`/`ffmpeg` (regenerate via
+`node packages/renderer/scripts/build-music.mjs`).
+
+- Force a mood: `--music-mood mystery` / `"musicMood": "mystery"` (or `none`).
+- Use the **real Jamendo catalogue** (Creative Commons): `--music-source jamendo`
+  with a free `JAMENDO_CLIENT_ID` — the required attribution is surfaced in the
+  output and `result.music.attribution`.
+- Bring your own: `--music-track <path>` / `"musicTrack": "<path>"`.
+- Disable: `--no-music` / `"music": false`.
 
 ### Images
 

@@ -14,7 +14,13 @@ import { join, resolve } from 'node:path';
 import type { GenerateOptions, ProgressEvent, SceneScript } from '@chalkboard/shared';
 import { resolveLLMProvider } from '@chalkboard/llm';
 import { resolveTTSProvider } from '@chalkboard/narration';
-import { renderScript, muxFinal, probeAudioDuration } from '@chalkboard/renderer';
+import {
+  renderScript,
+  muxFinal,
+  probeAudioDuration,
+  resolveMusic,
+  type MusicResolution,
+} from '@chalkboard/renderer';
 import { repairScript } from '@chalkboard/whiteboard';
 import { generateSceneImages } from './images.js';
 import { selfCorrectScript } from './self-correct.js';
@@ -24,6 +30,8 @@ export interface GenerateResult {
   script: SceneScript;
   /** Working dir used; undefined if it was cleaned up. */
   workDir: string | undefined;
+  /** Which background track was used (mood, source, attribution). */
+  music?: { mood: string; source: string; attribution?: string };
 }
 
 export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
@@ -135,7 +143,21 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       onProgress: (msg) => emit(onProgress, { phase: 'render', message: msg }),
     });
 
-    // -------- 5. mux ----------
+    // -------- 5. resolve background music (mood-matched) ----------
+    let music: MusicResolution | undefined;
+    if (opts.music !== false) {
+      music = await resolveMusic({
+        enabled: true,
+        mood: opts.musicMood ?? script.meta.mood,
+        customPath: opts.musicTrack,
+        source: opts.musicSource,
+        jamendoClientId: opts.jamendoClientId,
+        workDir,
+        onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
+      });
+    }
+
+    // -------- 6. mux ----------
     emit(onProgress, { phase: 'mux', message: 'muxing audio' });
     const outputPath = resolve(opts.outputPath);
     await muxFinal({
@@ -144,14 +166,7 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       timings: rendered.timings,
       outputPath,
       workDir,
-      ...(opts.music === false
-        ? {}
-        : {
-            music: {
-              enabled: true,
-              ...(opts.musicTrack ? { path: opts.musicTrack } : {}),
-            },
-          }),
+      ...(music?.path ? { music: { enabled: true, path: music.path } } : {}),
       onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
     });
 
@@ -161,6 +176,15 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       outputPath,
       script,
       workDir: opts.keepWorkDir ? workDir : undefined,
+      ...(music && music.source !== 'none'
+        ? {
+            music: {
+              mood: music.mood,
+              source: music.source,
+              ...(music.attribution ? { attribution: music.attribution } : {}),
+            },
+          }
+        : {}),
     };
   } finally {
     if (!opts.keepWorkDir && !opts.workDir) {
