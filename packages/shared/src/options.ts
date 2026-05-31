@@ -24,6 +24,12 @@ export interface GenerateOptions {
   research?: 'openai-deep-research' | 'basic' | 'stub';
   /** Research depth for `cinematic`: 'quick' | 'standard' | 'deep'. */
   researchDepth?: 'quick' | 'standard' | 'deep';
+  /**
+   * Dub: render the same production in multiple languages. The script + images
+   * are built once, then narration + on-canvas text are localized per language
+   * and rendered to `<output>.<lang>.<ext>`. Output[0] is the primary result.
+   */
+  languages?: string[];
   /** LLM provider override. */
   llm?: LLMProviderConfig;
   /** TTS provider override. */

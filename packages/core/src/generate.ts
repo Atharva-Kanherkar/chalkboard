@@ -19,8 +19,9 @@ import type {
   SceneScript,
 } from '@chalkboard/shared';
 import { resolveLLMProvider, groundScriptInBrief, type ScriptBrief } from '@chalkboard/llm';
-import { resolveTTSProvider } from '@chalkboard/narration';
+import { resolveTTSProvider, type TTSProvider } from '@chalkboard/narration';
 import { resolveResearchProvider } from '@chalkboard/research';
+import { translateScript } from './translate.js';
 import {
   renderScript,
   muxFinal,
@@ -39,6 +40,8 @@ export interface GenerateResult {
   workDir: string | undefined;
   /** Which background track was used (mood, source, attribution). */
   music?: { mood: string; source: string; attribution?: string };
+  /** For multilingual runs: one output per language. */
+  outputs?: { language: string; outputPath: string }[];
 }
 
 export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
@@ -155,99 +158,167 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
       }
     }
 
-    // -------- 3. narration per scene ----------
-    const audioPaths: string[] = [];
-    const audioDurations: number[] = [];
-    for (let i = 0; i < script.scenes.length; i++) {
-      const scene = script.scenes[i]!;
-      emit(onProgress, {
-        phase: 'narration',
-        sceneIndex: i,
-        sceneCount: script.scenes.length,
-      });
+    // -------- 3-6. render the finalized script to mp4(s) ----------
+    // Multilingual "dub": build the script + images once (above), then localize
+    // the text and render one cut per language, reusing the same images.
+    const languages = opts.languages && opts.languages.length ? opts.languages : null;
+    const translateKey = opts.llm?.kind === 'openai' ? opts.llm.apiKey : undefined;
 
-      // Bring-your-own-VO: if the caller supplied an audio file for this scene,
-      // use it verbatim and skip TTS (creator uses their own voice).
-      const byo = opts.narrationAudio?.[i];
-      let path: string;
-      if (byo) {
-        const ext = extname(byo).slice(1) || 'mp3';
-        path = join(workDir, `scene-${i}.${ext}`);
-        await writeFile(path, await readFile(byo));
-      } else {
-        const voice = resolveSceneVoice(scene, script.meta, opts.voice);
-        const out = await tts.synthesize({
-          text: scene.narration,
-          language: script.meta.language,
-          ...(voice ? { voice } : {}),
-          ...(scene.delivery ? { delivery: scene.delivery } : {}),
-        });
-        path = join(workDir, `scene-${i}.${out.format}`);
-        await writeFile(path, out.bytes);
+    if (languages) {
+      const baseLang = script.meta.language;
+      const outputs: { language: string; outputPath: string }[] = [];
+      let firstMusic: MusicResolution | undefined;
+      for (const lang of languages) {
+        emit(onProgress, { phase: 'render', message: `=== language: ${lang} ===` });
+        const localized =
+          lang === baseLang
+            ? script
+            : await translateScript(script, lang, {
+                ...(translateKey ? { apiKey: translateKey } : {}),
+                onProgress: (msg) =>
+                  emit(onProgress, { phase: 'script', message: `[i18n] ${msg}` }),
+              });
+        const langDir = join(workDir, langSlug(lang));
+        await mkdir(langDir, { recursive: true });
+        const out = langOutputPath(opts.outputPath, lang);
+        const music = await renderFinalizedScript(localized, opts, tts, langDir, out, onProgress);
+        outputs.push({ language: lang, outputPath: out });
+        if (!firstMusic) firstMusic = music;
       }
-      audioPaths.push(path);
-      audioDurations.push(await probeAudioDuration(path));
+      emit(onProgress, { phase: 'done', outputPath: outputs[0]!.outputPath });
+      return {
+        outputPath: outputs[0]!.outputPath,
+        script,
+        workDir: opts.keepWorkDir ? workDir : undefined,
+        outputs,
+        ...musicSummary(firstMusic),
+      };
     }
 
-    // -------- 4. render silent video ----------
-    emit(onProgress, { phase: 'render', message: 'rendering silent video' });
-    const rendered = await renderScript({
-      script,
-      audioInfo: audioDurations.map((durationMs) => ({ durationMs })),
-      workDir,
-      subtitles: opts.subtitles !== false,
-      ...(opts.renderConcurrency ? { concurrency: opts.renderConcurrency } : {}),
-      onProgress: (msg) => emit(onProgress, { phase: 'render', message: msg }),
-    });
-
-    // -------- 5. resolve background music (mood-matched) ----------
-    let music: MusicResolution | undefined;
-    if (opts.music !== false) {
-      music = await resolveMusic({
-        enabled: true,
-        mood: opts.musicMood ?? script.meta.mood,
-        customPath: opts.musicTrack,
-        source: opts.musicSource,
-        jamendoClientId: opts.jamendoClientId,
-        workDir,
-        onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
-      });
-    }
-
-    // -------- 6. mux ----------
-    emit(onProgress, { phase: 'mux', message: 'muxing audio' });
     const outputPath = resolve(opts.outputPath);
-    await muxFinal({
-      silentVideoPath: rendered.silentVideoPath,
-      audioTracks: audioPaths.map((path, i) => ({ path, durationMs: audioDurations[i]! })),
-      timings: rendered.timings,
-      outputPath,
-      workDir,
-      ...(music?.path ? { music: { enabled: true, path: music.path } } : {}),
-      onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
-    });
-
+    const music = await renderFinalizedScript(script, opts, tts, workDir, outputPath, onProgress);
     emit(onProgress, { phase: 'done', outputPath });
-
     return {
       outputPath,
       script,
       workDir: opts.keepWorkDir ? workDir : undefined,
-      ...(music && music.source !== 'none'
-        ? {
-            music: {
-              mood: music.mood,
-              source: music.source,
-              ...(music.attribution ? { attribution: music.attribution } : {}),
-            },
-          }
-        : {}),
+      ...musicSummary(music),
     };
   } finally {
     if (!opts.keepWorkDir && !opts.workDir) {
       await rm(workDir, { recursive: true, force: true }).catch(() => undefined);
     }
   }
+}
+
+/**
+ * Steps 3-6 for a finalized script: per-scene narration → silent render →
+ * mood music → mux. Used once for a single video, or once per language for a
+ * multilingual dub (each call gets its own work subdir + output path). Returns
+ * the resolved music (for the result summary).
+ */
+async function renderFinalizedScript(
+  script: SceneScript,
+  opts: GenerateOptions,
+  tts: TTSProvider,
+  workDir: string,
+  outputPath: string,
+  onProgress: (e: ProgressEvent) => void,
+): Promise<MusicResolution | undefined> {
+  await mkdir(workDir, { recursive: true });
+
+  // -------- 3. narration per scene ----------
+  const audioPaths: string[] = [];
+  const audioDurations: number[] = [];
+  for (let i = 0; i < script.scenes.length; i++) {
+    const scene = script.scenes[i]!;
+    emit(onProgress, { phase: 'narration', sceneIndex: i, sceneCount: script.scenes.length });
+
+    // Bring-your-own-VO: a caller-supplied audio file for this scene skips TTS.
+    const byo = opts.narrationAudio?.[i];
+    let path: string;
+    if (byo) {
+      const ext = extname(byo).slice(1) || 'mp3';
+      path = join(workDir, `scene-${i}.${ext}`);
+      await writeFile(path, await readFile(byo));
+    } else {
+      const voice = resolveSceneVoice(scene, script.meta, opts.voice);
+      const out = await tts.synthesize({
+        text: scene.narration,
+        language: script.meta.language,
+        ...(voice ? { voice } : {}),
+        ...(scene.delivery ? { delivery: scene.delivery } : {}),
+      });
+      path = join(workDir, `scene-${i}.${out.format}`);
+      await writeFile(path, out.bytes);
+    }
+    audioPaths.push(path);
+    audioDurations.push(await probeAudioDuration(path));
+  }
+
+  // -------- 4. render silent video ----------
+  emit(onProgress, { phase: 'render', message: 'rendering silent video' });
+  const rendered = await renderScript({
+    script,
+    audioInfo: audioDurations.map((durationMs) => ({ durationMs })),
+    workDir,
+    subtitles: opts.subtitles !== false,
+    ...(opts.renderConcurrency ? { concurrency: opts.renderConcurrency } : {}),
+    onProgress: (msg) => emit(onProgress, { phase: 'render', message: msg }),
+  });
+
+  // -------- 5. resolve background music (mood-matched) ----------
+  let music: MusicResolution | undefined;
+  if (opts.music !== false) {
+    music = await resolveMusic({
+      enabled: true,
+      mood: opts.musicMood ?? script.meta.mood,
+      customPath: opts.musicTrack,
+      source: opts.musicSource,
+      jamendoClientId: opts.jamendoClientId,
+      workDir,
+      onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
+    });
+  }
+
+  // -------- 6. mux ----------
+  emit(onProgress, { phase: 'mux', message: 'muxing audio' });
+  await muxFinal({
+    silentVideoPath: rendered.silentVideoPath,
+    audioTracks: audioPaths.map((path, i) => ({ path, durationMs: audioDurations[i]! })),
+    timings: rendered.timings,
+    outputPath,
+    workDir,
+    ...(music?.path ? { music: { enabled: true, path: music.path } } : {}),
+    onProgress: (msg) => emit(onProgress, { phase: 'mux', message: msg }),
+  });
+  return music;
+}
+
+function musicSummary(music: MusicResolution | undefined): Pick<GenerateResult, 'music'> {
+  if (!music || music.source === 'none') return {};
+  return {
+    music: {
+      mood: music.mood,
+      source: music.source,
+      ...(music.attribution ? { attribution: music.attribution } : {}),
+    },
+  };
+}
+
+/** Filesystem-safe short slug for a language (e.g. "Hinglish (...)" → "hinglish"). */
+function langSlug(language: string): string {
+  const head = language.trim().split(/[\s(]/)[0] ?? language;
+  return head.toLowerCase().replace(/[^a-z0-9-]/g, '') || 'lang';
+}
+
+/** Insert a language slug before the extension: video.mp4 + "hi" → video.hi.mp4 */
+function langOutputPath(outputPath: string, language: string): string {
+  const abs = resolve(outputPath);
+  const dot = abs.lastIndexOf('.');
+  const slug = langSlug(language);
+  if (dot <= abs.lastIndexOf('/')) return `${abs}.${slug}`;
+  return `${abs.slice(0, dot)}.${slug}${abs.slice(dot)}`;
 }
 
 function emit(fn: (e: ProgressEvent) => void, event: ProgressEvent) {

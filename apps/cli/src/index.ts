@@ -35,6 +35,7 @@ interface CliFlags {
   cinematic?: boolean;
   research?: 'openai-deep-research' | 'basic' | 'stub';
   depth?: 'quick' | 'standard' | 'deep';
+  languages?: string;
 }
 
 const program = new Command();
@@ -57,6 +58,10 @@ program
     'Research provider for --cinematic: openai-deep-research | basic | stub',
   )
   .option('--depth <level>', 'Research depth for --cinematic: quick | standard | deep')
+  .option(
+    '--languages <list>',
+    'Dub into multiple languages, comma-separated (e.g. en,hi,es) → one mp4 per language',
+  )
   .option('--voice <id>', 'Voice id (provider-specific)')
   .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama | stub')
   .option('--llm-model <id>', 'LLM model id')
@@ -103,6 +108,14 @@ program
       ...(flags.cinematic ? { format: 'cinematic' } : flags.short ? { format: 'short' } : {}),
       ...(flags.research ? { research: flags.research } : {}),
       ...(flags.depth ? { researchDepth: flags.depth } : {}),
+      ...(flags.languages
+        ? {
+            languages: flags.languages
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          }
+        : {}),
       ...(flags.voice ? { voice: flags.voice } : {}),
       ...(flags.workDir ? { workDir: flags.workDir } : {}),
       ...(flags.keep ? { keepWorkDir: true } : {}),
@@ -126,7 +139,12 @@ program
     try {
       const result = await generate(opts);
       if (!flags.quiet) {
-        console.error(`\n✓ wrote ${result.outputPath}`);
+        if (result.outputs && result.outputs.length > 1) {
+          console.error(`\n✓ wrote ${result.outputs.length} language cuts:`);
+          for (const o of result.outputs) console.error(`  [${o.language}] ${o.outputPath}`);
+        } else {
+          console.error(`\n✓ wrote ${result.outputPath}`);
+        }
         if (result.music) {
           console.error(
             `  music: ${result.music.mood} (${result.music.source})` +
