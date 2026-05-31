@@ -163,6 +163,81 @@ program
     console.log(JSON.stringify(script, null, 2));
   });
 
+program
+  .command('research')
+  .description('Research a topic into a grounded, cited brief (no script/render).')
+  .argument('<topic...>', 'The topic or question to research.')
+  .option(
+    '--provider <kind>',
+    'Research provider: openai-deep-research | basic | stub (default: auto)',
+  )
+  .option('--model <id>', 'Override the research model')
+  .option('--depth <level>', 'quick | standard | deep (default standard)')
+  .option('-l, --lang <bcp47>', 'Language for the brief', 'en')
+  .option('--base-url <url>', 'OpenAI-compatible base URL (e.g. local Ollama)')
+  .option('--json', 'Print the raw CitedBrief JSON')
+  .action(async (topicParts: string[], rawFlags) => {
+    const topic = topicParts.join(' ').trim();
+    if (!topic) {
+      console.error('chalkboard research: topic is required');
+      process.exit(2);
+    }
+    const flags = rawFlags as {
+      provider?: 'openai-deep-research' | 'basic' | 'stub';
+      model?: string;
+      depth?: 'quick' | 'standard' | 'deep';
+      lang: string;
+      baseUrl?: string;
+      json?: boolean;
+    };
+    const { resolveResearchProvider } = await import('@chalkboard/research');
+    const provider = resolveResearchProvider(
+      flags.provider
+        ? {
+            kind: flags.provider,
+            ...(flags.model ? { model: flags.model } : {}),
+            ...(flags.baseUrl ? { baseURL: flags.baseUrl } : {}),
+          }
+        : undefined,
+    );
+    const brief = await provider.research({
+      topic,
+      ...(flags.depth ? { depth: flags.depth } : {}),
+      language: flags.lang,
+      onProgress: (m) => console.error(`[research] ${m}`),
+    });
+
+    if (flags.json) {
+      console.log(JSON.stringify(brief, null, 2));
+      return;
+    }
+
+    const out: string[] = [];
+    out.push(`# ${brief.topic}`);
+    out.push('');
+    out.push(brief.summary);
+    out.push('');
+    out.push(`## Findings`);
+    brief.findings.forEach((f, i) => {
+      const refs = f.cites.length ? ` [${f.cites.join(', ')}]` : '';
+      out.push(`${i + 1}. ${f.text}${refs}`);
+    });
+    if (brief.sources.length) {
+      out.push('');
+      out.push(`## Sources`);
+      for (const s of brief.sources) {
+        out.push(`- ${s.id}: ${s.title ? `${s.title} — ` : ''}${s.url}`);
+      }
+    }
+    out.push('');
+    out.push(
+      `— ${brief.provider}${brief.model ? ` (${brief.model})` : ''} · ` +
+        `${brief.grounded ? 'grounded' : 'UNGROUNDED (no live sources)'}` +
+        (typeof brief.estCostUsd === 'number' ? ` · ~$${brief.estCostUsd.toFixed(4)} est.` : ''),
+    );
+    console.log(out.join('\n'));
+  });
+
 program.parseAsync().catch((err) => {
   console.error(err);
   process.exit(1);

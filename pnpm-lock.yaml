@@ -32,6 +32,9 @@ importers:
       '@chalkboard/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      '@chalkboard/research':
+        specifier: workspace:*
+        version: link:../../packages/research
       '@chalkboard/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -230,6 +233,28 @@ importers:
       playwright:
         specifier: ^1.49.1
         version: 1.60.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.19.19
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.19)(lightningcss@1.32.0)
+
+  packages/research:
+    dependencies:
+      '@chalkboard/shared':
+        specifier: workspace:*
+        version: link:../shared
+      openai:
+        specifier: ^4.77.0
+        version: 4.104.0
     devDependencies:
       '@types/node':
         specifier: ^22.10.0
