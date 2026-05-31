@@ -21,7 +21,7 @@ import type {
 import { resolveLLMProvider, groundScriptInBrief, type ScriptBrief } from '@chalkboard/llm';
 import { resolveTTSProvider, type TTSProvider } from '@chalkboard/narration';
 import { resolveResearchProvider } from '@chalkboard/research';
-import { translateScript } from './translate.js';
+import { translateScript, translateStrings } from './translate.js';
 import {
   renderScript,
   muxFinal,
@@ -257,12 +257,34 @@ async function renderFinalizedScript(
   }
 
   // -------- 4. render silent video ----------
+  // Subtitles in a different language than the voice (e.g. Hindi audio, English
+  // subs): translate each scene's narration into the subtitle language and burn
+  // those as captions. On-canvas text + audio stay in the narration language.
+  let captionTexts: (string | undefined)[] | undefined;
+  if (
+    opts.subtitleLanguage &&
+    opts.subtitles !== false &&
+    opts.subtitleLanguage !== script.meta.language
+  ) {
+    const key = opts.llm?.kind === 'openai' ? opts.llm.apiKey : undefined;
+    const translated = await translateStrings(
+      script.scenes.map((s) => s.narration),
+      opts.subtitleLanguage,
+      {
+        ...(key ? { apiKey: key } : {}),
+        onProgress: (m) => emit(onProgress, { phase: 'render', message: `[subtitles] ${m}` }),
+      },
+    );
+    if (translated) captionTexts = translated;
+  }
+
   emit(onProgress, { phase: 'render', message: 'rendering silent video' });
   const rendered = await renderScript({
     script,
     audioInfo: audioDurations.map((durationMs) => ({ durationMs })),
     workDir,
     subtitles: opts.subtitles !== false,
+    ...(captionTexts ? { captionTexts } : {}),
     ...(opts.renderConcurrency ? { concurrency: opts.renderConcurrency } : {}),
     onProgress: (msg) => emit(onProgress, { phase: 'render', message: msg }),
   });

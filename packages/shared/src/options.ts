@@ -42,6 +42,12 @@ export interface GenerateOptions {
   keepWorkDir?: boolean;
   /** Burn per-scene captions into the video. Default: true. */
   subtitles?: boolean;
+  /**
+   * Language for the burned subtitles, when it differs from the narration (e.g.
+   * Hindi voice + English subtitles). Each scene's narration is translated into
+   * this language for captions only; audio + on-canvas text are unchanged.
+   */
+  subtitleLanguage?: string;
   /** Mix background music (ducked under narration) into the video. Default: true. */
   music?: boolean;
   /** Custom background music track. Overrides the mood-matched bundled track. */

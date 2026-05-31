@@ -40,6 +40,12 @@ export interface RenderInput {
   /** Draw per-scene captions onto the canvas. Default: true. */
   subtitles?: boolean;
   /**
+   * Override caption text per scene (aligned by index). Used to burn subtitles
+   * in a different language than the narration/voice (e.g. Hindi audio, English
+   * subtitles). Falls back to the scene's narration where an entry is absent.
+   */
+  captionTexts?: (string | undefined)[];
+  /**
    * Max scenes to render concurrently. Scenes are independent (each starts from
    * a cleared board), so they record in parallel and are concatenated after —
    * the render is no longer bound to real-time playback of the whole video.
@@ -83,7 +89,7 @@ export async function renderScript(input: RenderInput): Promise<RenderOutput> {
     input.subtitles === false
       ? script.scenes.map(() => [])
       : planSceneCaptions(
-          script.scenes.map((s) => ({ narration: s.narration })),
+          script.scenes.map((s, i) => ({ narration: input.captionTexts?.[i] ?? s.narration })),
           timings,
         );
 

@@ -22,6 +22,7 @@ interface CliFlags {
   keep?: boolean;
   quiet?: boolean;
   subtitles?: boolean;
+  subtitleLang?: string;
   music?: boolean;
   musicTrack?: string;
   musicMood?: 'wonder' | 'mystery' | 'dramatic' | 'upbeat' | 'calm' | 'none';
@@ -71,6 +72,10 @@ program
   .option('--work-dir <path>', 'Working dir (kept around if set)')
   .option('--keep', "Don't clean the working dir")
   .option('--no-subtitles', 'Disable burned-in captions (on by default)')
+  .option(
+    '--subtitle-lang <bcp47>',
+    'Burn subtitles in this language even if the narration differs (e.g. English subs over Hindi audio)',
+  )
   .option('--no-music', 'Disable background music (on by default)')
   .option('--music-track <path>', 'Custom background music file (overrides the mood track)')
   .option(
@@ -120,6 +125,7 @@ program
       ...(flags.workDir ? { workDir: flags.workDir } : {}),
       ...(flags.keep ? { keepWorkDir: true } : {}),
       ...(flags.subtitles === false ? { subtitles: false } : {}),
+      ...(flags.subtitleLang ? { subtitleLanguage: flags.subtitleLang } : {}),
       ...(flags.music === false ? { music: false } : {}),
       ...(flags.musicTrack ? { musicTrack: flags.musicTrack } : {}),
       ...(flags.musicMood ? { musicMood: flags.musicMood } : {}),

@@ -14,37 +14,19 @@ export interface TranslateOptions {
 }
 
 /**
- * Translate a script's narration + text elements into `targetLanguage`.
- * Returns a new script; the original is untouched. Falls back to the original
- * (unchanged) when no OpenAI key is available.
+ * Translate a list of strings into `targetLanguage`, preserving order. Returns
+ * null when there's nothing to do, no key, or the result doesn't line up — so
+ * callers can fall back to the originals.
  */
-export async function translateScript(
-  script: SceneScript,
+export async function translateStrings(
+  texts: string[],
   targetLanguage: string,
   opts: TranslateOptions = {},
-): Promise<SceneScript> {
+): Promise<string[] | null> {
   const apiKey = opts.apiKey ?? process.env['OPENAI_API_KEY'];
-
-  // Gather every translatable string with a path back to where it lives.
-  type Slot = { sceneIdx: number; elIdx: number | null }; // elIdx null => narration
-  const slots: Slot[] = [];
-  const texts: string[] = [];
-  script.scenes.forEach((scene, sceneIdx) => {
-    if (scene.narration && scene.narration.trim()) {
-      slots.push({ sceneIdx, elIdx: null });
-      texts.push(scene.narration);
-    }
-    (scene.elements ?? []).forEach((el, elIdx) => {
-      if (typeof el['text'] === 'string' && el['text'].trim()) {
-        slots.push({ sceneIdx, elIdx });
-        texts.push(el['text'] as string);
-      }
-    });
-  });
-
   if (texts.length === 0 || !apiKey) {
     if (!apiKey) opts.onProgress?.(`no OPENAI_API_KEY — skipping translation to ${targetLanguage}`);
-    return { ...script, meta: { ...script.meta, language: targetLanguage } };
+    return null;
   }
 
   opts.onProgress?.(`translating ${texts.length} strings to ${targetLanguage}`);
@@ -74,10 +56,45 @@ export async function translateScript(
     };
     if (Array.isArray(parsed.translations)) translations = parsed.translations;
   } catch {
-    /* fall through to length check */
+    /* fall through */
   }
   if (translations.length !== texts.length) {
-    opts.onProgress?.(`translation count mismatch for ${targetLanguage} — keeping original text`);
+    opts.onProgress?.(`translation count mismatch for ${targetLanguage} — keeping originals`);
+    return null;
+  }
+  return translations;
+}
+
+/**
+ * Translate a script's narration + text elements into `targetLanguage`.
+ * Returns a new script; the original is untouched. Falls back to the original
+ * (unchanged) when no OpenAI key is available.
+ */
+export async function translateScript(
+  script: SceneScript,
+  targetLanguage: string,
+  opts: TranslateOptions = {},
+): Promise<SceneScript> {
+  // Gather every translatable string with a path back to where it lives.
+  type Slot = { sceneIdx: number; elIdx: number | null }; // elIdx null => narration
+  const slots: Slot[] = [];
+  const texts: string[] = [];
+  script.scenes.forEach((scene, sceneIdx) => {
+    if (scene.narration && scene.narration.trim()) {
+      slots.push({ sceneIdx, elIdx: null });
+      texts.push(scene.narration);
+    }
+    (scene.elements ?? []).forEach((el, elIdx) => {
+      if (typeof el['text'] === 'string' && el['text'].trim()) {
+        slots.push({ sceneIdx, elIdx });
+        texts.push(el['text'] as string);
+      }
+    });
+  });
+
+  const translations = texts.length ? await translateStrings(texts, targetLanguage, opts) : [];
+  if (!translations) {
+    // No key / mismatch — keep original text, just re-stamp the language.
     return { ...script, meta: { ...script.meta, language: targetLanguage } };
   }
 
