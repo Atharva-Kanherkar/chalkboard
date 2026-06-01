@@ -20,13 +20,19 @@ const EXAMPLES: Record<StudioMode, string[]> = {
     'How WiFi actually works',
     'The Monty Hall problem in 20 seconds',
   ],
+  cinematic: [
+    'The race to sequence the human genome',
+    'How the Roman aqueducts were built',
+    'The story of the Voyager probes',
+    'Why the dinosaurs went extinct',
+  ],
 };
 
 const HERO: Record<StudioMode, { title: React.ReactNode; sub: string }> = {
   explainer: {
     title: (
       <>
-        Turn a sentence into a <span className="gradient-text">video</span>.
+        Turn a sentence into a <span className="text-grad">video</span>.
       </>
     ),
     sub: 'Type a topic. chalkboard writes the script, draws the diagrams, generates imagery, narrates it, and renders an mp4 — with subtitles and music.',
@@ -34,14 +40,24 @@ const HERO: Record<StudioMode, { title: React.ReactNode; sub: string }> = {
   reels: {
     title: (
       <>
-        Make a <span className="gradient-text">reel</span> from a topic.
+        Make a <span className="text-grad">reel</span> from a topic.
       </>
     ),
     sub: 'Vertical 9:16, hook-first, ~30 seconds, big captions, royalty-free music. Post it, then drop a trending sound on top in-app.',
   },
+  cinematic: {
+    title: (
+      <>
+        Turn a topic into a <span className="text-grad">documentary</span>.
+      </>
+    ),
+    sub: 'chalkboard researches the subject first, then builds a full-frame cut — real imagery, Ken Burns motion, and an emotional voiceover, grounded in cited sources.',
+  },
 };
 
 const BASE_OPTIONS = {
+  language: 'en',
+  researchDepth: 'standard' as const,
   subtitles: true,
   music: true,
   images: true,
@@ -52,6 +68,7 @@ const BASE_OPTIONS = {
 const OPTIONS_FOR: Record<StudioMode, GenerateOptions> = {
   explainer: { format: 'explainer', aspectRatio: '16:9', ...BASE_OPTIONS },
   reels: { format: 'short', aspectRatio: '9:16', ...BASE_OPTIONS },
+  cinematic: { format: 'cinematic', aspectRatio: '16:9', ...BASE_OPTIONS },
 };
 
 let idSeq = 0;
@@ -98,6 +115,7 @@ export function Studio() {
       text: prompt,
       job: null,
       startedAt: Date.now(),
+      aspectRatio: options.aspectRatio,
     };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
 
@@ -138,13 +156,13 @@ export function Studio() {
         {/* mobile header */}
         <header className="flex items-center justify-between px-5 py-3.5 md:hidden">
           <div className="text-sm font-semibold tracking-tight">
-            chalkboard <span className="gradient-text">studio</span>
+            chalkboard <span className="text-[var(--muted)]">studio</span>
           </div>
           <a
             href="https://github.com/Atharva-Kanherkar/chalkboard"
             target="_blank"
             rel="noreferrer"
-            className="chip rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--muted)]"
+            className="chip rounded-full px-3 py-1.5 text-xs font-medium"
           >
             GitHub ↗
           </a>
@@ -163,14 +181,14 @@ export function Studio() {
                       key={ex}
                       type="button"
                       onClick={() => setInput(ex)}
-                      className="chip rounded-full px-3.5 py-1.5 text-sm text-[var(--muted)]"
+                      className="chip rounded-full px-3.5 py-1.5 text-sm"
                     >
                       {ex}
                     </button>
                   ))}
                 </div>
-                <p className="mt-6 text-xs text-[var(--muted)]/70">
-                  Tip: toggle <span className="text-violet-300">⚡ Demo</span> for an instant,
+                <p className="mt-6 text-xs text-[var(--faint)]">
+                  Tip: turn on <span className="text-[var(--muted)]">Demo</span> for an instant,
                   no-cost render to try it out.
                 </p>
               </div>

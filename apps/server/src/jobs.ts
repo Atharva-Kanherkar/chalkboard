@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { basename } from 'node:path';
 import { generate } from '@chalkboard/core';
 import type {
   GenerateOptions,
@@ -16,6 +17,8 @@ export interface Job {
   progress: ProgressEvent[];
   error?: string;
   outputKey?: string;
+  /** For multilingual dubs: one storage key per language (primary first). */
+  outputs?: { language: string; key: string }[];
   /** Storage key for the persisted SceneScript JSON. */
   scriptKey?: string;
   createdAt: string;
@@ -56,11 +59,17 @@ export class JobStore {
     job.updatedAt = new Date().toISOString();
   }
 
-  succeed(id: string, outputKey: string, scriptKey?: string): void {
+  succeed(
+    id: string,
+    outputKey: string,
+    scriptKey?: string,
+    outputs?: { language: string; key: string }[],
+  ): void {
     const job = this.map.get(id);
     if (!job) return;
     job.status = 'done';
     job.outputKey = outputKey;
+    if (outputs && outputs.length > 1) job.outputs = outputs;
     if (scriptKey) job.scriptKey = scriptKey;
     job.updatedAt = new Date().toISOString();
   }
@@ -78,7 +87,13 @@ export interface RunJobInput {
   prompt: string;
   language: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
-  format?: 'explainer' | 'short';
+  format?: 'explainer' | 'short' | 'cinematic';
+  research?: 'openai-deep-research' | 'basic' | 'stub';
+  researchDepth?: 'quick' | 'standard' | 'deep';
+  /** Dub: render the same production in each of these languages. */
+  languages?: string[];
+  /** Burn subtitles in this language even when narration differs. */
+  subtitleLanguage?: string;
   voice?: string;
   llm?: LLMProviderConfig;
   tts?: TTSProviderConfig;
@@ -107,6 +122,10 @@ export async function runJob(
     language: input.language,
     aspectRatio: input.aspectRatio,
     ...(input.format ? { format: input.format } : {}),
+    ...(input.research ? { research: input.research } : {}),
+    ...(input.researchDepth ? { researchDepth: input.researchDepth } : {}),
+    ...(input.languages && input.languages.length ? { languages: input.languages } : {}),
+    ...(input.subtitleLanguage ? { subtitleLanguage: input.subtitleLanguage } : {}),
     ...(input.voice ? { voice: input.voice } : {}),
     ...(input.llm ? { llm: input.llm } : {}),
     ...(input.tts ? { tts: input.tts } : {}),
@@ -121,6 +140,15 @@ export async function runJob(
   };
 
   const result = await generate(opts);
+
+  // For a multilingual dub, generate() writes one file per language
+  // (`<id>.<lang>.mp4`) and `outputPath` points at the primary. Derive storage
+  // keys from the real filenames so each language is independently servable.
+  const primaryKey = basename(result.outputPath);
+  const outputs = result.outputs?.map((o) => ({
+    language: o.language,
+    key: basename(o.outputPath),
+  }));
 
   // Persist the SceneScript alongside the mp4 so the exact LLM output that
   // produced a given video is recoverable. Failures here must not fail the
@@ -138,5 +166,5 @@ export async function runJob(
     );
   }
 
-  store.succeed(job.id, outputKey, scriptKey);
+  store.succeed(job.id, primaryKey, scriptKey, outputs);
 }

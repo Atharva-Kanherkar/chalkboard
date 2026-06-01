@@ -1,10 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { ChatMessage } from '@/lib/types';
+import { type AspectRatio, type ChatMessage, languageLabel } from '@/lib/types';
 import { videoUrl } from '@/lib/api';
-import { ProgressTracker } from './progress';
-import { Alert, Download, Logo } from './icons';
+import { currentStatus } from './progress';
+import { Alert, Download } from './icons';
+
+const ASPECT_CSS: Record<AspectRatio, string> = {
+  '16:9': '16 / 9',
+  '9:16': '9 / 16',
+  '1:1': '1 / 1',
+};
 
 function Elapsed({ since }: { since: number }) {
   const [now, setNow] = useState(() => Date.now());
@@ -16,81 +22,101 @@ function Elapsed({ since }: { since: number }) {
   const mm = Math.floor(s / 60);
   const ss = s % 60;
   return (
-    <span className="mono text-xs text-[var(--muted)]">
+    <span className="mono text-xs text-[var(--faint)]">
       {mm}:{String(ss).padStart(2, '0')}
     </span>
   );
 }
 
 export function MessageView({ msg }: { msg: ChatMessage }) {
+  // A multilingual dub exposes several language cuts; track which one is shown.
+  const langs = msg.job?.languages ?? null;
+  const [lang, setLang] = useState<string | null>(null);
+  const activeLang = lang ?? langs?.[0] ?? undefined;
+
   if (msg.role === 'user') {
     return (
       <div className="animate-rise flex justify-end">
-        <div className="max-w-[78%] rounded-2xl rounded-br-md bg-[var(--panel-2)] px-4 py-2.5 text-[15px] leading-relaxed text-[var(--text)] ring-1 ring-[var(--border)]">
+        <div className="max-w-[80%] rounded-3xl rounded-br-lg bg-[var(--surface-2)] px-4 py-2.5 text-[15px] leading-relaxed text-[var(--text)]">
           {msg.text}
         </div>
       </div>
     );
   }
 
-  const running = msg.job?.status === 'running' || msg.job?.status === 'queued' || !msg.job;
   const done = msg.videoId && msg.job?.status === 'done';
+  const aspect = ASPECT_CSS[msg.aspectRatio ?? '16:9'];
 
-  return (
-    <div className="animate-rise flex items-start gap-3">
-      <div className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/25 to-pink-500/25 text-violet-300 ring-1 ring-[var(--border)]">
-        <Logo className="h-4.5 w-4.5" />
+  if (msg.error) {
+    return (
+      <div className="animate-rise flex items-start gap-2.5 rounded-2xl border border-red-500/25 bg-red-500/[0.06] px-4 py-3 text-sm text-red-300/90">
+        <Alert className="mt-0.5 h-4 w-4 flex-none" />
+        <div>
+          <div className="font-medium text-red-200/90">Generation failed</div>
+          <div className="mono mt-1 text-xs text-red-300/70">{msg.error}</div>
+        </div>
       </div>
+    );
+  }
 
-      <div className="min-w-0 flex-1">
-        {msg.error ? (
-          <div className="flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            <Alert className="mt-0.5 h-4 w-4 flex-none" />
-            <div>
-              <div className="font-medium">Generation failed</div>
-              <div className="mono mt-1 text-xs text-red-300/80">{msg.error}</div>
-            </div>
-          </div>
-        ) : done ? (
-          <div className="glass overflow-hidden rounded-2xl">
-            <video
-              className="mx-auto block max-h-[72vh] max-w-full bg-black"
-              src={videoUrl(msg.videoId!)}
-              controls
-              playsInline
-            />
-            <div className="flex items-center justify-between px-4 py-3">
-              <span className="text-sm text-[var(--muted)]">Done — “{msg.text}”</span>
-              <a
-                href={videoUrl(msg.videoId!)}
-                download="chalkboard.mp4"
-                className="chip inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--muted)]"
+  if (done) {
+    const src = videoUrl(msg.videoId!, activeLang);
+    return (
+      <div className="animate-rise card overflow-hidden rounded-2xl">
+        <video
+          key={activeLang ?? 'default'}
+          className="mx-auto block max-h-[72vh] max-w-full bg-black"
+          src={src}
+          controls
+          playsInline
+        />
+        {langs && langs.length > 1 && (
+          <div className="flex flex-wrap gap-1 px-4 pt-3">
+            {langs.map((code) => (
+              <button
+                key={code}
+                type="button"
+                onClick={() => setLang(code)}
+                className={
+                  'rounded-full px-3 py-1 text-xs font-medium transition ' +
+                  (code === activeLang
+                    ? 'bg-white/10 text-[var(--text)] ring-1 ring-white/15'
+                    : 'text-[var(--muted)] hover:text-[var(--text)]')
+                }
               >
-                <Download className="h-3.5 w-3.5" /> Download
-              </a>
-            </div>
-          </div>
-        ) : (
-          <div className="glass rounded-2xl px-4 py-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-[var(--text)]">Generating your video</span>
-              {msg.startedAt ? <Elapsed since={msg.startedAt} /> : null}
-            </div>
-            {msg.job ? (
-              <ProgressTracker job={msg.job} />
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-[var(--muted)]">
-                <span className="spinner" /> starting…
-              </div>
-            )}
-            {running && (
-              <p className="mt-3 text-xs text-[var(--muted)]/70">
-                Real renders record in real time, so this takes a few minutes. Demo mode is
-                near-instant.
-              </p>
-            )}
+                {languageLabel(code)}
+              </button>
+            ))}
           </div>
         )}
+        <div className="flex items-center justify-between px-4 py-3">
+          <span className="truncate text-sm text-[var(--muted)]">{msg.text}</span>
+          <a
+            href={src}
+            download={`chalkboard${activeLang ? '.' + activeLang : ''}.mp4`}
+            className="chip inline-flex flex-none items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+          >
+            <Download className="h-3.5 w-3.5" /> Download
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // loading — pulsating skeleton figures + one understated status line
+  return (
+    <div className="animate-rise card rounded-2xl p-3">
+      <div className="skeleton w-full" style={{ aspectRatio: aspect }} />
+      <div className="mt-3 flex items-center gap-3 px-1">
+        <div className="skeleton h-3 flex-1" style={{ animationDelay: '0.2s' }} />
+        <div className="skeleton h-3 w-12" style={{ animationDelay: '0.4s' }} />
+      </div>
+      <div className="mt-3.5 flex items-center justify-between px-1 pb-0.5">
+        <span className="flex items-center gap-2 text-[13px] text-[var(--muted)]">
+          <span className="animate-dot h-1.5 w-1.5 rounded-full bg-[var(--text)]" />
+          {currentStatus(msg.job)}
+        </span>
+        {msg.startedAt ? <Elapsed since={msg.startedAt} /> : null}
       </div>
     </div>
   );

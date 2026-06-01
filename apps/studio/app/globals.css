@@ -1,14 +1,14 @@
 @import 'tailwindcss';
 
 :root {
-  --bg: #0a0a0c;
-  --panel: #141418;
-  --panel-2: #1b1b21;
-  --border: #26262e;
-  --text: #ececf1;
-  --muted: #9a9aa7;
-  --accent: #8b5cf6;
-  --accent-2: #ec4899;
+  --bg: #080809;
+  --surface: #111113;
+  --surface-2: #18181b;
+  --border: #232327;
+  --border-soft: #1c1c20;
+  --text: #f4f4f5;
+  --muted: #8a8a93;
+  --faint: #5c5c64;
 }
 
 * {
@@ -26,95 +26,100 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
-  /* soft glow top-center, echoing the demo's warm/cosmic palette */
-  background-image:
-    radial-gradient(60% 50% at 50% -10%, rgba(139, 92, 246, 0.18), transparent 70%),
-    radial-gradient(40% 40% at 85% 10%, rgba(236, 72, 153, 0.1), transparent 70%);
+  text-rendering: optimizeLegibility;
+  /* a single, very faint white glow — depth without colour */
+  background-image: radial-gradient(
+    70% 55% at 50% -15%,
+    rgba(255, 255, 255, 0.05),
+    transparent 70%
+  );
   background-attachment: fixed;
 }
 
 .mono {
   font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, monospace;
+  font-feature-settings: 'tnum' 1;
 }
 
-.gradient-text {
-  background: linear-gradient(100deg, var(--accent), var(--accent-2));
+/* A subtle white gradient for the one highlighted word — no colour. */
+.text-grad {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.55) 130%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.glass {
-  background: color-mix(in srgb, var(--panel) 88%, transparent);
-  backdrop-filter: blur(12px);
+/* Neutral elevated surface used for cards. */
+.card {
+  background: var(--surface);
   border: 1px solid var(--border);
 }
 
-.btn-accent {
-  background: linear-gradient(100deg, var(--accent), var(--accent-2));
-  color: white;
+/* White primary action — the only "accent" in the app. */
+.btn-primary {
+  background: linear-gradient(180deg, #ffffff, #e6e6e8);
+  color: #0a0a0b;
   transition:
-    transform 0.12s ease,
-    box-shadow 0.2s ease,
-    opacity 0.2s ease;
-  box-shadow: 0 6px 20px -6px rgba(139, 92, 246, 0.6);
+    opacity 0.15s ease,
+    transform 0.12s ease;
 }
-.btn-accent:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 28px -8px rgba(139, 92, 246, 0.7);
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.92;
 }
-.btn-accent:disabled {
-  opacity: 0.45;
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn-primary:disabled {
+  background: var(--surface-2);
+  color: var(--faint);
   cursor: not-allowed;
-  box-shadow: none;
 }
 
+/* Quiet pill — examples, history, secondary buttons. */
 .chip {
   border: 1px solid var(--border);
-  background: var(--panel-2);
+  background: transparent;
+  color: var(--muted);
   transition:
     border-color 0.15s ease,
     color 0.15s ease,
     background 0.15s ease;
 }
 .chip:hover {
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+  border-color: var(--faint);
   color: var(--text);
+  background: var(--surface-2);
 }
 
-/* scrollbars */
+/* scrollbars — thin, neutral, unobtrusive */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2c2c35;
+  background: #2a2a30;
   border-radius: 8px;
   border: 2px solid var(--bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a45;
+  background: #36363d;
 }
 
-@keyframes pulse-soft {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-.animate-pulse-soft {
-  animation: pulse-soft 1.4s ease-in-out infinite;
-}
+/* ── motion ───────────────────────────────────────────── */
 
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -122,19 +127,37 @@ body {
   }
 }
 .animate-rise {
-  animation: rise 0.28s ease-out both;
+  animation: rise 0.26s ease-out both;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+/* Pulsating skeleton — the only loading affordance. */
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.32;
   }
 }
-.spinner {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  border-top-color: var(--accent);
-  animation: spin 0.7s linear infinite;
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2), #202024, var(--surface-2));
+  border-radius: 10px;
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+/* A soft pulsing dot — used in-line for "live" status. */
+@keyframes dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.82);
+  }
+}
+.animate-dot {
+  animation: dot-pulse 1.4s ease-in-out infinite;
 }

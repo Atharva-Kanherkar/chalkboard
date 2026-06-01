@@ -6,13 +6,14 @@ import { Logo } from './icons';
 const MODES: { key: StudioMode | 'repurpose'; label: string; hint: string; live: boolean }[] = [
   { key: 'explainer', label: 'Explainer', hint: 'Concept → video', live: true },
   { key: 'reels', label: 'Reels', hint: 'Vertical shorts', live: true },
+  { key: 'cinematic', label: 'Cinematic', hint: 'Researched film', live: true },
   { key: 'repurpose', label: 'Repurpose', hint: 'Doc → series', live: false },
 ];
 
 function statusDot(m: ChatMessage) {
-  if (m.error) return 'bg-red-400';
-  if (m.videoId) return 'bg-emerald-400';
-  return 'bg-violet-400 animate-pulse-soft';
+  if (m.error) return 'bg-red-400/80';
+  if (m.videoId) return 'bg-[var(--text)]';
+  return 'bg-[var(--text)] animate-dot';
 }
 
 export function Sidebar({
@@ -29,13 +30,13 @@ export function Sidebar({
   onSelect: (id: string) => void;
 }) {
   return (
-    <aside className="hidden w-64 flex-none flex-col border-r border-[var(--border)] bg-[color-mix(in_srgb,var(--panel)_50%,transparent)] md:flex">
+    <aside className="hidden w-64 flex-none flex-col border-r border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_55%,transparent)] md:flex">
       <div className="flex items-center gap-2.5 px-4 py-3.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/30 to-pink-500/30 text-violet-200 ring-1 ring-[var(--border)]">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--surface-2)] text-[var(--text)] ring-1 ring-[var(--border)]">
           <Logo className="h-5 w-5" />
         </span>
         <div className="text-sm font-semibold tracking-tight">
-          chalkboard <span className="gradient-text">studio</span>
+          chalkboard <span className="text-[var(--muted)]">studio</span>
         </div>
       </div>
 
@@ -43,7 +44,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onNew}
-          className="btn-accent w-full rounded-xl px-3 py-2 text-sm font-medium"
+          className="btn-primary w-full rounded-xl px-3 py-2 text-sm font-medium"
         >
           + New video
         </button>
@@ -65,9 +66,9 @@ export function Sidebar({
               className={
                 'mb-1 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ' +
                 (active
-                  ? 'bg-[var(--panel-2)] text-[var(--text)] ring-1 ring-violet-400/40'
+                  ? 'bg-[var(--surface-2)] text-[var(--text)] ring-1 ring-white/15'
                   : m.live
-                    ? 'text-[var(--muted)] hover:bg-[var(--panel-2)] hover:text-[var(--text)]'
+                    ? 'text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)]'
                     : 'cursor-default text-[var(--muted)]/60')
               }
             >
@@ -76,11 +77,11 @@ export function Sidebar({
                 <span className="text-[11px] text-[var(--muted)]/70">{m.hint}</span>
               </span>
               {!m.live ? (
-                <span className="rounded-full bg-[var(--panel-2)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] ring-1 ring-[var(--border)]">
+                <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[10px] font-medium text-[var(--muted)] ring-1 ring-[var(--border)]">
                   soon
                 </span>
               ) : active ? (
-                <span className="h-1.5 w-1.5 rounded-full bg-violet-400" />
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--text)]" />
               ) : null}
             </button>
           );
@@ -104,7 +105,7 @@ export function Sidebar({
                     <button
                       type="button"
                       onClick={() => onSelect(m.id)}
-                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-[var(--muted)] transition hover:bg-[var(--panel-2)] hover:text-[var(--text)]"
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-[var(--muted)] transition hover:bg-[var(--surface-2)] hover:text-[var(--text)]"
                     >
                       <span className={'h-1.5 w-1.5 flex-none rounded-full ' + statusDot(m)} />
                       <span className="truncate">{m.text}</span>

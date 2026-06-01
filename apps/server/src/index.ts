@@ -36,7 +36,28 @@ app.post('/generate', async (c) => {
   if (!prompt) return c.json({ error: 'prompt is required' }, 400);
 
   const language = typeof body['language'] === 'string' ? body['language'] : 'en';
-  const format = body['format'] === 'short' ? 'short' : undefined;
+  const format =
+    body['format'] === 'short' || body['format'] === 'cinematic'
+      ? (body['format'] as 'short' | 'cinematic')
+      : undefined;
+  const research =
+    body['research'] === 'openai-deep-research' ||
+    body['research'] === 'basic' ||
+    body['research'] === 'stub'
+      ? (body['research'] as 'openai-deep-research' | 'basic' | 'stub')
+      : undefined;
+  const researchDepth =
+    body['researchDepth'] === 'quick' ||
+    body['researchDepth'] === 'standard' ||
+    body['researchDepth'] === 'deep'
+      ? (body['researchDepth'] as 'quick' | 'standard' | 'deep')
+      : undefined;
+  // Dub languages: array of BCP-47 strings (e.g. ["en","hi","es"]).
+  const languages = Array.isArray(body['languages'])
+    ? (body['languages'].filter((l) => typeof l === 'string' && l.trim()) as string[])
+    : undefined;
+  const subtitleLanguage =
+    typeof body['subtitleLanguage'] === 'string' ? body['subtitleLanguage'] : undefined;
   // Shorts default to vertical; explicit aspectRatio always wins.
   const aspectRatio =
     body['aspectRatio'] === '9:16' ||
@@ -80,6 +101,10 @@ app.post('/generate', async (c) => {
     language,
     aspectRatio,
     ...(format ? { format } : {}),
+    ...(research ? { research } : {}),
+    ...(researchDepth ? { researchDepth } : {}),
+    ...(languages && languages.length ? { languages } : {}),
+    ...(subtitleLanguage ? { subtitleLanguage } : {}),
     ...(voice ? { voice } : {}),
     ...(llm ? { llm } : {}),
     ...(tts ? { tts } : {}),
@@ -125,12 +150,16 @@ app.get('/jobs/:id', (c) => {
 app.get('/jobs/:id/video', async (c) => {
   const job = jobs.get(c.req.param('id'));
   if (!job || !job.outputKey) return c.json({ error: 'not ready' }, 404);
-  const stream = await storage.openReadable(job.outputKey);
+  // `?lang=hi` serves a specific language from a multilingual dub; default is
+  // the primary output.
+  const lang = c.req.query('lang');
+  const key = (lang && job.outputs?.find((o) => o.language === lang)?.key) || job.outputKey;
+  const stream = await storage.openReadable(key);
   if (!stream) return c.json({ error: 'gone' }, 410);
   return new Response(stream, {
     headers: {
       'Content-Type': 'video/mp4',
-      'Content-Disposition': `inline; filename="${job.id}.mp4"`,
+      'Content-Disposition': `inline; filename="${key}"`,
     },
   });
 });
@@ -190,6 +219,8 @@ function toJSON(job: Job) {
     progress: job.progress,
     error: job.error ?? null,
     outputUrl: job.outputKey ? `/jobs/${job.id}/video` : null,
+    // For multilingual dubs: the languages available via `/video?lang=`.
+    languages: job.outputs ? job.outputs.map((o) => o.language) : null,
     scriptUrl: job.scriptKey ? `/jobs/${job.id}/script` : null,
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,

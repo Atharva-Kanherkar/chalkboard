@@ -4,17 +4,25 @@ import type { GenerateOptions, Job } from './types';
 export async function createJob(prompt: string, opts: GenerateOptions): Promise<string> {
   const body: Record<string, unknown> = {
     prompt,
+    language: opts.language,
     aspectRatio: opts.aspectRatio,
     subtitles: opts.subtitles,
     music: opts.music,
     images: opts.images,
   };
-  if (opts.format === 'short') body.format = 'short';
+  if (opts.format === 'short' || opts.format === 'cinematic') body.format = opts.format;
+  if (opts.format === 'cinematic') body.researchDepth = opts.researchDepth;
   if (opts.selfCorrect) body.selfCorrect = true;
+  // Dub: only send when there's more than just the narration language.
+  if (opts.languages && opts.languages.length > 1) body.languages = opts.languages;
+  if (opts.subtitleLanguage && opts.subtitleLanguage !== opts.language) {
+    body.subtitleLanguage = opts.subtitleLanguage;
+  }
   if (opts.demo) {
     body.llm = { kind: 'stub' };
     body.tts = { kind: 'stub' };
     body.images = false; // stub script has no image elements anyway
+    if (opts.format === 'cinematic') body.research = 'stub'; // skip real research in demo
   }
 
   const res = await fetch('/api/generate', {
@@ -36,8 +44,8 @@ export async function fetchJob(id: string): Promise<Job> {
   return (await res.json()) as Job;
 }
 
-export function videoUrl(id: string): string {
-  return `/api/jobs/${id}/video`;
+export function videoUrl(id: string, lang?: string): string {
+  return lang ? `/api/jobs/${id}/video?lang=${encodeURIComponent(lang)}` : `/api/jobs/${id}/video`;
 }
 
 /** Poll a job to completion, calling `onUpdate` on every change. */

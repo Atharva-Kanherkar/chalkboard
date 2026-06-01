@@ -1,5 +1,23 @@
 export type AspectRatio = '16:9' | '9:16' | '1:1';
 
+/** Curated narration/subtitle/dub languages surfaced in the studio UI. */
+export const LANGUAGES: { code: string; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'Hindi' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'fr', label: 'French' },
+  { code: 'de', label: 'German' },
+  { code: 'pt', label: 'Portuguese' },
+  { code: 'ja', label: 'Japanese' },
+  { code: 'zh', label: 'Chinese' },
+  { code: 'ar', label: 'Arabic' },
+  { code: 'ru', label: 'Russian' },
+];
+
+export function languageLabel(code: string): string {
+  return LANGUAGES.find((l) => l.code === code)?.label ?? code.toUpperCase();
+}
+
 export type ProgressEvent =
   | { phase: 'script'; message: string }
   | { phase: 'narration'; sceneIndex: number; sceneCount: number }
@@ -15,16 +33,28 @@ export interface Job {
   progress: ProgressEvent[];
   error: string | null;
   outputUrl: string | null;
+  /** For multilingual dubs: languages available via `/video?lang=`. */
+  languages: string[] | null;
   scriptUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-export type StudioMode = 'explainer' | 'reels';
+export type StudioMode = 'explainer' | 'reels' | 'cinematic';
+
+export type ResearchDepth = 'quick' | 'standard' | 'deep';
 
 export interface GenerateOptions {
-  format: 'explainer' | 'short';
+  format: 'explainer' | 'short' | 'cinematic';
   aspectRatio: AspectRatio;
+  /** Narration language (BCP-47). Default 'en'. */
+  language: string;
+  /** Research depth for the cinematic format. */
+  researchDepth: ResearchDepth;
+  /** Dub targets (incl. narration language). undefined/empty = single language. */
+  languages?: string[];
+  /** Burn subtitles in this language even when narration differs. undefined = match narration. */
+  subtitleLanguage?: string;
   subtitles: boolean;
   music: boolean;
   images: boolean;
@@ -52,4 +82,6 @@ export interface ChatMessage {
   videoId?: string | null;
   error?: string | null;
   startedAt?: number;
+  /** aspect of the requested render — shapes the loading skeleton */
+  aspectRatio?: AspectRatio;
 }
