@@ -28,6 +28,8 @@ cost per video can be zero. MIT-licensed: yours to fork, embed, and bill for.
 
 ## Features
 
+- **Three formats** — a 16:9 **explainer**, a vertical hook-first **reel** (`--short`), or a research-backed **cinematic** documentary (`--cinematic`) with full-frame imagery, Ken Burns motion, and emotional VO.
+- **Multilingual** — dub one production into many languages in a single run (`--languages en,hi,es` → one mp4 each), and burn subtitles in a different language than the audio (`--subtitle-lang`).
 - **Any provider** — Anthropic, OpenAI, or fully local Ollama for the script; Piper, OpenAI, or ElevenLabs for narration.
 - **Hand-drawn diagrams** — a RoughJS sketch aesthetic, with Graphviz auto-layout for graphs, trees, linked lists, and state machines.
 - **Real images** — `image` elements are generated with `gpt-image-2` (sharp, accurate in-image text for labels and charts) for visual and science topics (stars, cells, maps), not just boxes and arrows.
@@ -88,11 +90,14 @@ packages/
   whiteboard/  pure helpers (draw animation, element normalization)
   llm/         LLMProvider + Anthropic/OpenAI/Ollama/Stub adapters
   narration/   TTSProvider + Piper/OpenAI/ElevenLabs/Stub adapters
+  research/    grounded, cited briefs (powers --cinematic)
   renderer/    Playwright headless Chromium + ffmpeg mux
   core/        generate() orchestrator
 apps/
   cli/         `chalkboard generate ...`
   server/      HTTP API: POST /generate, GET /jobs/:id, GET /jobs/:id/video
+  studio/      Next.js chat-style frontend (live pipeline, inline mp4)
+  web/         minimal static web UI served by the server
 ```
 
 ## Configuration
@@ -101,7 +106,7 @@ apps/
 
 | kind        | env / setup                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------- |
-| `anthropic` | `ANTHROPIC_API_KEY` (default model: `claude-haiku-4-5`)                                      |
+| `anthropic` | `ANTHROPIC_API_KEY` (default model: `claude-haiku-4-5-20251001`)                             |
 | `openai`    | `OPENAI_API_KEY`                                                                             |
 | `ollama`    | `OLLAMA_BASE_URL` (default `http://localhost:11434`), `OLLAMA_MODEL` (default `llama3.1:8b`) |
 | `stub`      | none — returns a fixed SceneScript, for tests                                                |
@@ -125,6 +130,11 @@ Captions are **on by default** and drawn straight onto the canvas during render
 no player support or libass-enabled `ffmpeg` required. They're built from the
 narration and timed per scene. Disable with `--no-subtitles` (CLI) or
 `"subtitles": false` (HTTP body / `GenerateOptions`).
+
+Subtitles can be in a **different language than the audio** — e.g. Hindi
+narration with English captions. Each scene's narration is translated for the
+captions only; the audio and on-canvas text are untouched. Use
+`--subtitle-lang <bcp47>` (CLI) or `"subtitleLanguage": "en"` (`GenerateOptions`).
 
 ### Background music
 
@@ -176,7 +186,7 @@ before finalizing. Two layers:
    text, separates overlaps. No API calls.
 2. **Vision critique** (opt-in: `--self-correct [passes]` / `"selfCorrect": true|N`)
    — screenshots each scene's final state, sends the still to a vision model
-   (`gpt-4o` by default, `OPENAI_VISION_MODEL` to override), and applies the
+   (`gpt-5.5` by default, `OPENAI_VISION_MODEL` to override), and applies the
    corrected elements it returns. Catches what geometry can't: unreadable
    contrast, text over a dark shape, awkward composition. Bounded passes; needs
    `OPENAI_API_KEY`.
@@ -284,6 +294,42 @@ export.
 chalkboard generate "3 wild facts about black holes" --short -o reel.mp4
 ```
 
+### Cinematic (research-backed documentary)
+
+`--cinematic` researches the topic first, then builds a full-frame documentary
+cut: real generated imagery edge-to-edge, Ken Burns motion, transitions, and a
+more emotional voiceover — closer to a short film than a whiteboard. The
+research is grounded and cited, and the brief's sources are injected into the
+script so the narration stays factual.
+
+```bash
+chalkboard generate "the race to sequence the human genome" --cinematic -o film.mp4
+```
+
+- Research depth: `--depth quick | standard | deep` (default `standard`).
+- Research provider: `--research openai-deep-research | basic | stub`
+  (default: deep research if `OPENAI_API_KEY` is set, otherwise a basic web pass).
+
+You can also research a topic on its own — a grounded, cited brief with no
+render — which is handy for inspecting sources before committing to a video:
+
+```bash
+chalkboard research "the race to sequence the human genome" --depth deep
+chalkboard research "..." --json > brief.json   # raw CitedBrief
+```
+
+### Multilingual (dub one production into many languages)
+
+Build the script and images **once**, then localize narration and on-canvas
+text per language — one mp4 per language, all sharing the same visuals.
+
+```bash
+chalkboard generate "explain photosynthesis" --languages en,hi,es -o photosynthesis.mp4
+# → photosynthesis.en.mp4, photosynthesis.hi.mp4, photosynthesis.es.mp4
+```
+
+Via the library: `"languages": ["en", "hi", "es"]` on `GenerateOptions`.
+
 ### SceneScript
 
 The contract between LLM and renderer is a typed JSON document:
@@ -361,6 +407,12 @@ portability and no render farm.
 - **Animated vector art** — MIT-licensed Lottie playback composited into the render, alongside the static SVG/motifs.
 - **Document ingestion** — turn a PDF or Markdown doc into a video, not just a prompt.
 - **More voices & languages** — broaden the local (Piper) voice library.
+
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md)
+for setup, the checks CI runs, and a tour of the monorepo. No API keys are
+needed to develop: the stub providers render a real mp4 for free.
 
 ## License
 
