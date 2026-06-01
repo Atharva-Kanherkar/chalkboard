@@ -272,6 +272,21 @@ and get the mp4 inline with a download. Toggle aspect ratio (or research depth i
 Cinematic), subtitles, music, images, self-correct, multilingual dubbing,
 subtitle language, or **Demo** (stub providers — instant, no API cost).
 
+<p align="center">
+  <img src="docs/studio-hero.png" alt="chalkboard studio — turn a sentence into a video" width="820">
+  <br><em>Type a topic, pick a lane (Explainer · Reels · Cinematic), and generate.</em>
+</p>
+
+<p align="center">
+  <img src="docs/studio-loading.png" alt="live generation with a pulsating skeleton" width="820">
+  <br><em>The pipeline runs live — script → narration → render → mux — with a lightweight loading state.</em>
+</p>
+
+<p align="center">
+  <img src="docs/studio-cinematic.png" alt="cinematic lane with a depth control and multilingual dubbing" width="820">
+  <br><em>The Cinematic lane adds a Quick/Standard/Deep research depth; dub one production into many languages in a single run.</em>
+</p>
+
 ```bash
 pnpm --filter @chalkboard/server start            # backend on :4140
 pnpm --filter @chalkboard/studio dev              # studio on :3000
