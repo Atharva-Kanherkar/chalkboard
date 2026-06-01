@@ -268,8 +268,9 @@ API keys are read from the server's env; the web UI never sees them.
 
 `apps/studio` is the polished product frontend: a chat-style workspace where you
 type a topic, watch the pipeline run live (script → narration → render → mux),
-and get the mp4 inline with a download. Toggle aspect ratio, subtitles, music,
-images, self-correct, or **⚡ Demo** (stub providers — instant, no API cost).
+and get the mp4 inline with a download. Toggle aspect ratio (or research depth in
+Cinematic), subtitles, music, images, self-correct, multilingual dubbing,
+subtitle language, or **Demo** (stub providers — instant, no API cost).
 
 ```bash
 pnpm --filter @chalkboard/server start            # backend on :4140
@@ -278,8 +279,11 @@ pnpm --filter @chalkboard/studio dev              # studio on :3000
 
 Open <http://localhost:3000>. The studio proxies `/api/*` to the server
 (`CHALKBOARD_API` env overrides the target), so it deploys independently of the
-backend. Two lanes are live — **Explainer** (16:9) and **Reels** (vertical 9:16
-shorts); Repurpose is on the roadmap.
+backend. Three lanes are live — **Explainer** (16:9), **Reels** (vertical 9:16
+shorts), and **Cinematic** (researched documentary with a Quick/Standard/Deep
+depth control); Repurpose is on the roadmap. The studio can also dub one
+production into multiple languages in a single run (with a per-language switcher
+on the result) and burn subtitles in a different language than the narration.
 
 ### Reels (vertical shorts)
 
