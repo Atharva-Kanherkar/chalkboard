@@ -31,7 +31,7 @@ cost per video can be zero. MIT-licensed: yours to fork, embed, and bill for.
 - **Three formats**: a 16:9 **explainer**, a vertical hook-first **reel** (`--short`), or a research-backed **cinematic** documentary (`--cinematic`) with full-frame imagery, Ken Burns motion, and emotional VO.
 - **Multilingual**: dub one production into many languages in a single run (`--languages en,hi,es` → one mp4 each), and burn subtitles in a different language than the audio (`--subtitle-lang`).
 - **Any provider**: Anthropic, OpenAI, or fully local Ollama for the script; Piper, OpenAI, or ElevenLabs for narration.
-- **Hand-drawn diagrams**: a RoughJS sketch aesthetic, with Graphviz auto-layout for graphs, trees, linked lists, and state machines.
+- **Hand-drawn diagrams**: a RoughJS sketch aesthetic, with Graphviz auto-layout for graphs, trees, linked lists, and state machines. Add `--draw` to trace each element on like a pen (a "draw my life" effect) instead of the default fade-in.
 - **Real images**: `image` elements are generated with `gpt-image-2` (sharp, accurate in-image text for labels and charts) for visual and science topics (stars, cells, maps), not just boxes and arrows.
 - **Vector art**: built-in SVG motifs and custom inline SVG, at zero API cost.
 - **Subtitles**: burned into every frame, with no player or libass dependency.

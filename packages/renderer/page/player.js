@@ -2,8 +2,11 @@
 //
 // Reads window.__chalkboard__ injected by the renderer process. Renders each
 // scene's elements onto a single <canvas> using RoughJS for the hand-drawn
-// look. Animates by fading elements in (opacity ramp), staggered, matching the
-// pacing of skillware's draw-animation. Audio is muxed post-hoc.
+// look. Animates element by element: by default each one fades in (opacity
+// ramp); when meta.animation === 'draw' (opt-in) each one is traced on like a
+// pen — RoughJS outline strokes revealed along their length
+// (setLineDash/lineDashOffset) with fills washing in behind. Audio is muxed
+// post-hoc.
 //
 // Signals to the host:
 //   - logs `[chalkboard] READY` once the canvas is ready and the page has had
@@ -544,10 +547,12 @@
     return lines;
   }
 
-  function drawText(el, byId) {
+  // Resolve a text element to its laid-out lines + metrics. Shared by drawText
+  // (final frame) and drawTextRevealed (in-progress wipe) so the two can't drift.
+  // Sets ctx.font as a side effect (measureText needs it).
+  function layoutText(el, byId) {
     const fontSize = el.fontSize || 24;
     const family = familyFor(el);
-    ctx.fillStyle = el.strokeColor || '#1e1e1e';
     ctx.font = `${fontSize}px ${family}`;
     ctx.textBaseline = 'top';
 
@@ -576,15 +581,24 @@
       }
     }
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    return { lines, fontSize, family, maxWidth, align, lineHeight, y0 };
+  }
+
+  function drawText(el, byId) {
+    const lay = layoutText(el, byId);
+    ctx.fillStyle = el.strokeColor || '#1e1e1e';
+    ctx.font = `${lay.fontSize}px ${lay.family}`;
+    ctx.textBaseline = 'top';
+
+    for (let i = 0; i < lay.lines.length; i++) {
+      const line = lay.lines[i];
       let x = el.x;
-      if (align !== 'left' && maxWidth) {
+      if (lay.align !== 'left' && lay.maxWidth) {
         const w = ctx.measureText(line).width;
-        if (align === 'center') x = el.x + (maxWidth - w) / 2;
-        else if (align === 'right') x = el.x + (maxWidth - w);
+        if (lay.align === 'center') x = el.x + (lay.maxWidth - w) / 2;
+        else if (lay.align === 'right') x = el.x + (lay.maxWidth - w);
       }
-      ctx.fillText(line, x, y0 + i * lineHeight);
+      ctx.fillText(line, x, lay.y0 + i * lay.lineHeight);
     }
   }
 
@@ -657,6 +671,481 @@
     ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
   }
 
+  // -------- hand-drawn progressive reveal --------
+  // The currently-animating element is drawn "as if a pen is tracing it" rather
+  // than faded in: RoughJS outline strokes are revealed along their length via
+  // setLineDash + lineDashOffset, and fills materialize as the outline completes.
+  // Prior/final elements still render through drawElement() (above) unchanged, so
+  // the end-state is byte-for-byte today's look — only the in-progress frames differ.
+
+  const clamp01 = (t) => Math.min(1, Math.max(0, t));
+  // Pen tracing is steady (linear); fills ease in so they don't pop.
+  const fillEase = easeOutCubicSafe;
+  function easeOutCubicSafe(t) {
+    const c = clamp01(t);
+    return 1 - (1 - c) ** 3;
+  }
+
+  // Lazily-created RoughJS generator (geometry only — never draws). Shared.
+  let _gen = null;
+  function gen() {
+    return _gen || (_gen = window.rough.generator());
+  }
+
+  // Per-element cache of the generated Drawable + its outline subpaths (as
+  // Path2D + length). Built once per id and reused every frame: regenerating
+  // rough geometry per frame would reseed the jitter (flicker) and tank fps.
+  const shapeCache = {};
+
+  // Approximate length of a cubic bezier by sampling.
+  function bezierLen(x0, y0, x1, y1, x2, y2, x3, y3) {
+    let len = 0;
+    let px = x0;
+    let py = y0;
+    const N = 16;
+    for (let i = 1; i <= N; i++) {
+      const t = i / N;
+      const mt = 1 - t;
+      const a = mt * mt * mt;
+      const b = 3 * mt * mt * t;
+      const c = 3 * mt * t * t;
+      const d = t * t * t;
+      const x = a * x0 + b * x1 + c * x2 + d * x3;
+      const y = a * y0 + b * y1 + c * y2 + d * y3;
+      len += Math.hypot(x - px, y - py);
+      px = x;
+      py = y;
+    }
+    return len;
+  }
+
+  // Split a RoughJS OpSet's ops into independent subpaths (one per `move`), each
+  // a Path2D plus its measured length. Splitting at every `move` is what lets us
+  // reveal RoughJS's two overlapping passes IN PARALLEL on the same progress —
+  // so the pen never finishes the shape then visibly re-traces it.
+  function opsToSubpaths(ops) {
+    const out = [];
+    let cur = null;
+    let len = 0;
+    let px = 0;
+    let py = 0;
+    const flush = () => {
+      if (cur) out.push({ path2d: cur, length: len });
+      cur = null;
+      len = 0;
+    };
+    for (const op of ops || []) {
+      const d = op.data || [];
+      if (op.op === 'move') {
+        flush();
+        cur = new Path2D();
+        cur.moveTo(d[0], d[1]);
+        px = d[0];
+        py = d[1];
+      } else if (op.op === 'lineTo') {
+        if (!cur) {
+          cur = new Path2D();
+          cur.moveTo(px, py);
+        }
+        cur.lineTo(d[0], d[1]);
+        len += Math.hypot(d[0] - px, d[1] - py);
+        px = d[0];
+        py = d[1];
+      } else if (op.op === 'bcurveTo') {
+        if (!cur) {
+          cur = new Path2D();
+          cur.moveTo(px, py);
+        }
+        cur.bezierCurveTo(d[0], d[1], d[2], d[3], d[4], d[5]);
+        len += bezierLen(px, py, d[0], d[1], d[2], d[3], d[4], d[5]);
+        px = d[4];
+        py = d[5];
+      }
+    }
+    flush();
+    return out;
+  }
+
+  // A single Path2D spanning all ops (used for fills, where subpath splitting
+  // doesn't matter — we fill/stroke the whole thing at once with a faded alpha).
+  function path2dFromOps(ops) {
+    const path = new Path2D();
+    let px = 0;
+    let py = 0;
+    for (const op of ops || []) {
+      const d = op.data || [];
+      if (op.op === 'move') {
+        path.moveTo(d[0], d[1]);
+        px = d[0];
+        py = d[1];
+      } else if (op.op === 'lineTo') {
+        path.lineTo(d[0], d[1]);
+        px = d[0];
+        py = d[1];
+      } else if (op.op === 'bcurveTo') {
+        path.bezierCurveTo(d[0], d[1], d[2], d[3], d[4], d[5]);
+        px = d[4];
+        py = d[5];
+      }
+    }
+    return path;
+  }
+
+  // Build (and cache) the Drawable + outline subpaths for a basic rough shape.
+  function cachedShape(key, build) {
+    if (shapeCache[key]) return shapeCache[key];
+    const drawable = build();
+    const sub = [];
+    for (const set of drawable.sets || []) {
+      if (set.type === 'path') sub.push(...opsToSubpaths(set.ops));
+    }
+    const entry = { drawable, sub };
+    shapeCache[key] = entry;
+    return entry;
+  }
+
+  function cachedRoughShape(el) {
+    const key = el.id || `${el.type}:${el.x},${el.y},${el.width},${el.height}`;
+    return cachedShape(key, () => {
+      const g = gen();
+      const opts = commonOpts(el);
+      if (el.type === 'rectangle') return g.rectangle(el.x, el.y, el.width, el.height, opts);
+      if (el.type === 'ellipse') {
+        return g.ellipse(el.x + el.width / 2, el.y + el.height / 2, el.width, el.height, opts);
+      }
+      if (el.type === 'diamond') {
+        const { x, y, width: w, height: h } = el;
+        return g.polygon(
+          [
+            [x + w / 2, y],
+            [x + w, y + h / 2],
+            [x + w / 2, y + h],
+            [x, y + h / 2],
+          ],
+          opts,
+        );
+      }
+      // line
+      const o = { ...opts };
+      delete o.fill;
+      const pts = (
+        el.points || [
+          [0, 0],
+          [el.width || 100, el.height || 0],
+        ]
+      ).map((pt) => [el.x + pt[0], el.y + pt[1]]);
+      return g.linearPath(pts, o);
+    });
+  }
+
+  // Render a cached Drawable with its outline revealed to progress p: fills fade
+  // in (fillEase), outline subpaths are traced via a length-long dash whose
+  // offset retreats from full-length (hidden) to 0 (drawn). alphaBase scales the
+  // whole thing (lets arrowheads/labels ride a sub-window of the same element).
+  function renderRevealed(drawable, sub, p, alphaBase) {
+    const base = typeof alphaBase === 'number' ? alphaBase : 1;
+    const o = drawable.options || {};
+    const e = clamp01(p);
+
+    // Fills first, under the outline — but they lag the outline so the pen
+    // appears to draw the border first, then wash the fill in behind it.
+    const fillP = clamp01((e - 0.4) / 0.6);
+    if (fillP > 0) {
+      ctx.save();
+      ctx.globalAlpha = base * fillEase(fillP);
+      for (const set of drawable.sets || []) {
+        if (set.type === 'fillPath') {
+          ctx.fillStyle = o.fill || '#000000';
+          ctx.fill(path2dFromOps(set.ops), 'evenodd');
+        } else if (set.type === 'fillSketch') {
+          ctx.strokeStyle = o.fill || '#000000';
+          ctx.lineWidth =
+            o.fillWeight && o.fillWeight > 0 ? o.fillWeight : (o.strokeWidth || 2) / 2;
+          ctx.stroke(path2dFromOps(set.ops));
+        }
+      }
+      ctx.restore();
+    }
+
+    // Outline, revealed along its length.
+    ctx.save();
+    ctx.strokeStyle = o.stroke || '#1e1e1e';
+    ctx.lineWidth = o.strokeWidth || 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const baseDash =
+      Array.isArray(o.strokeLineDash) && o.strokeLineDash.length ? o.strokeLineDash : null;
+    if (baseDash) {
+      // Dashed/dotted strokes can't also carry a reveal dash — fade them instead.
+      ctx.globalAlpha = base * e;
+      ctx.setLineDash(baseDash);
+      for (const s of sub) ctx.stroke(s.path2d);
+    } else {
+      ctx.globalAlpha = base;
+      for (const s of sub) {
+        const L = s.length || 1;
+        ctx.setLineDash([L]);
+        ctx.lineDashOffset = L * (1 - e);
+        ctx.stroke(s.path2d);
+      }
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawRoughRevealed(el, p) {
+    const { drawable, sub } = cachedRoughShape(el);
+    renderRevealed(drawable, sub, p);
+  }
+
+  // Arrow: shaft traces over the first 85% of the window, then the arrowhead is
+  // drawn and the label fades in over the last 15%.
+  const ARROW_SHAFT_FRAC = 0.85;
+  function drawArrowRevealed(el, byId, p) {
+    const { startX, startY, tipX, tipY } = arrowGeometry(el, byId);
+    const shaftP = clamp01(p / ARROW_SHAFT_FRAC);
+    const headP = clamp01((p - ARROW_SHAFT_FRAC) / (1 - ARROW_SHAFT_FRAC));
+
+    const shaft = cachedShape(`${el.id || 'arrow'}:shaft`, () => {
+      const o = commonOpts(el);
+      delete o.fill;
+      return gen().line(startX, startY, tipX, tipY, o);
+    });
+    renderRevealed(shaft.drawable, shaft.sub, shaftP);
+
+    if (headP > 0) {
+      const head = cachedShape(`${el.id || 'arrow'}:head`, () => {
+        const o = commonOpts(el);
+        delete o.fill;
+        const angle = Math.atan2(tipY - startY, tipX - startX);
+        const headLen = 22;
+        const spread = Math.PI / 7;
+        return gen().linearPath(
+          [
+            [tipX - headLen * Math.cos(angle - spread), tipY - headLen * Math.sin(angle - spread)],
+            [tipX, tipY],
+            [tipX - headLen * Math.cos(angle + spread), tipY - headLen * Math.sin(angle + spread)],
+          ],
+          o,
+        );
+      });
+      renderRevealed(head.drawable, head.sub, headP);
+
+      if (el.label && el.from && el.to) {
+        ctx.save();
+        ctx.globalAlpha = fillEase(headP);
+        const fontSize = el.labelFontSize || 22;
+        ctx.fillStyle = el.strokeColor || '#1e1e1e';
+        ctx.font = `${fontSize}px ${familyFor({ fontFamily: 1 })}`;
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
+        ctx.fillText(String(el.label), (startX + tipX) / 2, (startY + tipY) / 2 - fontSize * 0.9);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.restore();
+      }
+    }
+  }
+
+  // Shared arrow endpoint geometry (used by drawArrow for the final frame and by
+  // drawArrowRevealed for the in-progress frames — same math, no drift).
+  function arrowGeometry(el, byId) {
+    if (el.from && el.to && byId && byId[el.from] && byId[el.to]) {
+      const fromExit = exitPoint(byId[el.from], centerOf(byId[el.to]));
+      const toExit = exitPoint(byId[el.to], centerOf(byId[el.from]));
+      return { startX: fromExit.x, startY: fromExit.y, tipX: toExit.x, tipY: toExit.y };
+    }
+    const pts = el.points || [
+      [0, 0],
+      [el.width || 100, el.height || 0],
+    ];
+    const last = pts[pts.length - 1];
+    const prev = pts[pts.length - 2] || [0, 0];
+    return {
+      startX: (el.x || 0) + prev[0],
+      startY: (el.y || 0) + prev[1],
+      tipX: (el.x || 0) + last[0],
+      tipY: (el.y || 0) + last[1],
+    };
+  }
+
+  // Text: each wrapped line wipes left-to-right, lines in reading order across
+  // the window (line k reveals over its 1/n slice). A single block-wide clip
+  // would uncover the middles of stacked lines simultaneously — this doesn't.
+  function drawTextRevealed(el, byId, p) {
+    const lay = layoutText(el, byId);
+    ctx.fillStyle = el.strokeColor || '#1e1e1e';
+    ctx.font = `${lay.fontSize}px ${lay.family}`;
+    ctx.textBaseline = 'top';
+    const n = lay.lines.length || 1;
+    for (let i = 0; i < lay.lines.length; i++) {
+      const lineP = clamp01((p - i / n) * n);
+      if (lineP <= 0) continue;
+      const line = lay.lines[i];
+      const w = ctx.measureText(line).width;
+      let x = el.x;
+      if (lay.align !== 'left' && lay.maxWidth) {
+        if (lay.align === 'center') x = el.x + (lay.maxWidth - w) / 2;
+        else if (lay.align === 'right') x = el.x + (lay.maxWidth - w);
+      }
+      const ly = lay.y0 + i * lay.lineHeight;
+      if (lineP >= 1) {
+        ctx.fillText(line, x, ly);
+      } else {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, ly - 2, w * lineP, lay.lineHeight + 4);
+        ctx.clip();
+        ctx.fillText(line, x, ly);
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawCodeBlockRevealed(el, p) {
+    // Background panel reveals like a rectangle; code lines wipe in afterwards.
+    const width = el.width || 600;
+    const height = el.height || estimateCodeHeight(el);
+    const bgEl = {
+      ...el,
+      id: (el.id || 'code') + ':bg',
+      type: 'rectangle',
+      width,
+      height,
+      strokeColor: el.strokeColor || '#1e1e1e',
+      backgroundColor: el.backgroundColor || '#f1f3f5',
+      fillStyle: el.fillStyle || 'solid',
+      roughness: typeof el.roughness === 'number' ? el.roughness : 0.5,
+    };
+    const bgP = clamp01(p / 0.5);
+    drawRoughRevealed(bgEl, bgP);
+
+    const textP = clamp01((p - 0.4) / 0.6);
+    if (textP <= 0) return;
+    const fontSize = el.fontSize || 22;
+    ctx.fillStyle = el.textColor || '#1e1e1e';
+    ctx.font = `${fontSize}px ${familyFor(el)}`;
+    ctx.textBaseline = 'top';
+    const lineHeight = fontSize * 1.35;
+    const padX = el.paddingX || 24;
+    const padY = el.paddingY || 18;
+    const lines = String(el.text || el.code || '').split('\n');
+    const n = lines.length || 1;
+    for (let i = 0; i < lines.length; i++) {
+      const lineP = clamp01((textP - i / n) * n);
+      if (lineP <= 0) continue;
+      const line = lines[i];
+      const w = ctx.measureText(line).width;
+      const x = el.x + padX;
+      const y = el.y + padY + i * lineHeight;
+      if (lineP >= 1) {
+        ctx.fillText(line, x, y);
+      } else {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y - 2, w * lineP, lineHeight + 4);
+        ctx.clip();
+        ctx.fillText(line, x, y);
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawStepMarkerRevealed(el, p) {
+    const r = el.radius || 28;
+    const cx = el.x + r;
+    const cy = el.y + r;
+    const circle = cachedShape(`${el.id || 'step'}:circle`, () =>
+      gen().circle(cx, cy, r * 2, {
+        ...commonOpts(el),
+        fill: el.backgroundColor || '#ffec99',
+        fillStyle: el.fillStyle || 'solid',
+      }),
+    );
+    renderRevealed(circle.drawable, circle.sub, p);
+    if (p > 0.4) {
+      ctx.save();
+      ctx.globalAlpha = fillEase(clamp01((p - 0.4) / 0.6));
+      const fontSize = el.fontSize || Math.round(r * 0.95);
+      ctx.fillStyle = el.strokeColor || '#1e1e1e';
+      ctx.font = `bold ${fontSize}px ${familyFor({ fontFamily: 1 })}`;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillText(String(el.n ?? '1'), cx, cy + 1);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.restore();
+    }
+  }
+
+  function drawGroupRevealed(el, p) {
+    const rectEl = {
+      ...el,
+      id: (el.id || 'group') + ':rect',
+      type: 'rectangle',
+      width: el.width || 200,
+      height: el.height || 200,
+      strokeWidth: el.strokeWidth || 1.5,
+      backgroundColor: 'transparent',
+    };
+    drawRoughRevealed(rectEl, p);
+    if (el.label && p > 0.5) {
+      ctx.save();
+      ctx.globalAlpha = fillEase(clamp01((p - 0.5) / 0.5));
+      const fontSize = el.fontSize || 22;
+      ctx.fillStyle = el.strokeColor || '#1e1e1e';
+      ctx.font = `${fontSize}px ${familyFor({ fontFamily: 1 })}`;
+      ctx.textBaseline = 'bottom';
+      ctx.textAlign = 'left';
+      ctx.fillText(String(el.label), el.x + 8, el.y - 6);
+      ctx.textBaseline = 'top';
+      ctx.restore();
+    }
+  }
+
+  // Dispatch for the single in-progress element. Converges to drawElement()'s
+  // output as p→1, so the handoff to "fully drawn" is seamless.
+  function drawElementRevealed(el, byId, p) {
+    const e = clamp01(p);
+    switch (el.type) {
+      case 'image':
+        ctx.save();
+        ctx.globalAlpha = fillEase(e);
+        drawImageEl(el);
+        ctx.restore();
+        return;
+      case 'svg':
+        ctx.save();
+        ctx.globalAlpha = fillEase(e);
+        drawSvgEl(el);
+        ctx.restore();
+        return;
+      case 'highlight':
+        ctx.save();
+        ctx.globalAlpha = fillEase(e);
+        drawHighlight(el);
+        ctx.restore();
+        return;
+      case 'text':
+        return drawTextRevealed(el, byId, p);
+      case 'code-block':
+        return drawCodeBlockRevealed(el, p);
+      case 'step-marker':
+        return drawStepMarkerRevealed(el, p);
+      case 'group':
+        return drawGroupRevealed(el, p);
+      case 'arrow':
+        return drawArrowRevealed(el, byId, p);
+      case 'rectangle':
+      case 'ellipse':
+      case 'diamond':
+      case 'line':
+        return drawRoughRevealed(el, p);
+      default:
+        return undefined;
+    }
+  }
+
   function drawElement(rc, el, byId) {
     switch (el.type) {
       case 'image':
@@ -687,12 +1176,6 @@
         // Unknown type → skip silently.
         return undefined;
     }
-  }
-
-  // -------- animation --------
-  function easeOutCubic(t) {
-    const c = Math.min(1, Math.max(0, t));
-    return 1 - (1 - c) ** 3;
   }
 
   // -------- captions --------
@@ -762,17 +1245,35 @@
    * canvas at full opacity, then blitting with globalAlpha for the current
    * element.
    */
+  // Animation style: 'draw' traces strokes on like a pen; anything else (the
+  // default) fades each element in by opacity — the classic chalkboard look.
+  // Opt-in via meta.animation === 'draw' (CLI --draw).
+  const ANIM_MODE = (cfg.script && cfg.script.meta && cfg.script.meta.animation) || 'fade';
+  // In draw mode, finish tracing a touch before the element's window ends so the
+  // motion feels lively; the leftover is a brief settle. Window length is
+  // unchanged, so narration sync is identical to fade mode.
+  const DRAW_COMPRESS = 0.8;
+
   function paintScene(elements, currentIdx, currentProgress, byId) {
     paintBg();
     const rc = rcFor();
     for (let j = 0; j < elements.length; j++) {
       const el = elements[j];
       if (j < currentIdx) {
+        // Fully drawn — render through the unchanged path for end-state parity.
         ctx.globalAlpha = 1;
         drawElement(rc, el, byId);
       } else if (j === currentIdx) {
-        ctx.globalAlpha = easeOutCubic(currentProgress);
-        drawElement(rc, el, byId);
+        if (ANIM_MODE === 'draw') {
+          // The one element being drawn right now: trace it on like a pen.
+          ctx.globalAlpha = 1;
+          drawElementRevealed(el, byId, Math.min(1, currentProgress / DRAW_COMPRESS));
+          ctx.globalAlpha = 1;
+        } else {
+          // Default: fade the element in by opacity (classic behavior).
+          ctx.globalAlpha = easeOutCubicSafe(currentProgress);
+          drawElement(rc, el, byId);
+        }
       }
       // j > currentIdx: invisible — skip entirely.
     }
@@ -1003,6 +1504,22 @@
     // Snapshot mode: expose a painter and stop. The host drives screenshots.
     if (cfg.snapshot) {
       window.chalkboardPaintScene = (i) => paintSceneFinal(i);
+      // Debug hook for the draw-spike harness: paint scene `i` with elements
+      // [0..currentIdx) fully drawn and element `currentIdx` revealed to `p`.
+      window.chalkboardPaintProgress = (i, currentIdx, p) => {
+        const scene = cfg.script.scenes[i];
+        if (!scene) {
+          paintBg();
+          return false;
+        }
+        let elements = Array.isArray(scene.elements) ? scene.elements : [];
+        if (!hasRenderableContent(elements)) elements = synthesizeNarrationFallback(scene);
+        const byId = {};
+        for (const el of elements) if (el && el.id) byId[el.id] = el;
+        captionCues = [];
+        paintScene(elements, currentIdx, p, byId);
+        return true;
+      };
       paintBg();
       await sleep(100);
       console.log('[chalkboard] READY');

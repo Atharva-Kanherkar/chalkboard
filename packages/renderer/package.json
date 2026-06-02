@@ -15,6 +15,7 @@
     "test": "vitest run",
     "smoke": "tsx scripts/smoke.ts",
     "smoke:graphviz": "tsx scripts/graphviz-smoke.ts",
+    "spike:draw": "tsx scripts/draw-spike.ts",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
   "dependencies": {

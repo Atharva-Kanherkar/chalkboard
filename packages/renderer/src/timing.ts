@@ -21,6 +21,10 @@ export interface AudioInfo {
 }
 
 const MIN_SCENE_MS = 1500;
+// Per-element reveal window. In the default 'fade' animation the element fades
+// in over this span; in opt-in 'draw' mode the player traces it on over the
+// same window (finishing a touch early so it feels livelier). Either way the
+// total scene length is audio-driven, so this never affects narration sync.
 const DEFAULT_DRAW_MS = 540;
 const DEFAULT_HOLD_MS = 600;
 

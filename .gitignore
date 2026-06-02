@@ -39,6 +39,9 @@ coverage/
 # server job artifacts
 apps/*/out/
 
+# draw-spike visual harness output (PNG frames; the harness script is committed)
+packages/renderer/draw-spike/
+
 # next.js
 next-env.d.ts
 .gstack/

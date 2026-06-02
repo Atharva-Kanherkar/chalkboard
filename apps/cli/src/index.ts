@@ -34,6 +34,7 @@ interface CliFlags {
   selfCorrect?: string | boolean;
   short?: boolean;
   cinematic?: boolean;
+  draw?: boolean;
   research?: 'openai-deep-research' | 'basic' | 'stub';
   depth?: 'quick' | 'standard' | 'deep';
   languages?: string;
@@ -54,6 +55,7 @@ program
   .option('-a, --aspect <ratio>', 'Aspect ratio: 16:9, 9:16, 1:1', '16:9')
   .option('--short', 'Vertical hook-first reel (defaults aspect to 9:16)')
   .option('--cinematic', 'Research-backed full-frame documentary (Ken Burns + emotional VO)')
+  .option('--draw', 'Hand-drawn animation: trace each element on like a pen (default: fade in)')
   .option(
     '--research <kind>',
     'Research provider for --cinematic: openai-deep-research | basic | stub',
@@ -111,6 +113,7 @@ program
       language: flags.lang,
       aspectRatio,
       ...(flags.cinematic ? { format: 'cinematic' } : flags.short ? { format: 'short' } : {}),
+      ...(flags.draw ? { animation: 'draw' } : {}),
       ...(flags.research ? { research: flags.research } : {}),
       ...(flags.depth ? { researchDepth: flags.depth } : {}),
       ...(flags.languages
@@ -175,6 +178,7 @@ program
   .option('-l, --lang <bcp47>', 'Narration language', 'en')
   .option('-a, --aspect <ratio>', 'Aspect ratio', '16:9')
   .option('--format <fmt>', 'explainer | short | cinematic (cinematic researches first)')
+  .option('--draw', 'Tag the script for hand-drawn animation (sets meta.animation=draw)')
   .option('--llm <kind>', 'LLM provider: anthropic | openai | ollama | stub')
   .option('--llm-model <id>', 'LLM model id')
   .option(
@@ -192,6 +196,7 @@ program
       lang: string;
       aspect: '16:9' | '9:16' | '1:1';
       format?: 'explainer' | 'short' | 'cinematic';
+      draw?: boolean;
       llm?: CliFlags['llm'];
       llmModel?: string;
       research?: 'openai-deep-research' | 'basic' | 'stub';
@@ -235,6 +240,7 @@ program
     });
     // Ground the script: inject the brief's authoritative sources + drop stray cites.
     if (brief) script = groundScriptInBrief(script, brief);
+    if (flags.draw) script.meta.animation = 'draw';
 
     console.log(JSON.stringify(script, null, 2));
   });
