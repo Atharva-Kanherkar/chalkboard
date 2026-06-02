@@ -856,7 +856,8 @@
           ctx.fill(path2dFromOps(set.ops), 'evenodd');
         } else if (set.type === 'fillSketch') {
           ctx.strokeStyle = o.fill || '#000000';
-          ctx.lineWidth = o.fillWeight && o.fillWeight > 0 ? o.fillWeight : (o.strokeWidth || 2) / 2;
+          ctx.lineWidth =
+            o.fillWeight && o.fillWeight > 0 ? o.fillWeight : (o.strokeWidth || 2) / 2;
           ctx.stroke(path2dFromOps(set.ops));
         }
       }
@@ -869,7 +870,8 @@
     ctx.lineWidth = o.strokeWidth || 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    const baseDash = Array.isArray(o.strokeLineDash) && o.strokeLineDash.length ? o.strokeLineDash : null;
+    const baseDash =
+      Array.isArray(o.strokeLineDash) && o.strokeLineDash.length ? o.strokeLineDash : null;
     if (baseDash) {
       // Dashed/dotted strokes can't also carry a reveal dash — fade them instead.
       ctx.globalAlpha = base * e;

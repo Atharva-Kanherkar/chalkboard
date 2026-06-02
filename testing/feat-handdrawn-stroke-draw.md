@@ -8,7 +8,7 @@ fade-in. A little faster than today. Core change is in
 ## Functional Behavior
 
 1. **Progressive stroke reveal.** During an element's draw window, its RoughJS
-   outline strokes are revealed *along their length* (pen-drawing look), not faded
+   outline strokes are revealed _along their length_ (pen-drawing look), not faded
    in via opacity. Implemented with `Path2D` + `ctx.setLineDash` + `lineDashOffset`.
 2. **No re-trace artifact.** RoughJS traces each outline ~twice (multi-stroke).
    Each subpath (split at every `move` op) reveals **in parallel** on the same
