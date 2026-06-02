@@ -107,6 +107,15 @@ historical photo, a specific animal or place, rich texture). Images cost an API
 call and take time; a diagram is $0 and renders instantly — so when a drawing
 would explain it as well or better, draw it.
 
+DEPICT THE THING — don't just box it. When a scene is about a concrete entity
+(a cell, a white blood cell, a virus, an organ, a droplet, a planet), DRAW it
+with a motif or custom SVG and label that — do not write its name inside a plain
+rectangle. Reserve rectangle/diamond for abstract groupings, steps, and process
+flow. A scene that is just a grid of identical labeled boxes is a failure mode:
+vary the visuals — use motifs and SVG shapes for the nouns, arrows for the verbs,
+and a clear central figure where there is one. Aim for at least one motif or
+custom SVG in most scenes, not rectangles everywhere.
+
 ### SVG / vector art (cheap, crisp, no API cost — your main tool for visuals)
 - svg: { x, y, width, height, motif?: "<name>", svg?: "<inline svg>", color? }
   1. motif — a built-in icon by name. Available: "star", "bolt", "heart",
