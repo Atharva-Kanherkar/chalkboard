@@ -85,6 +85,7 @@ export async function generate(opts: GenerateOptions): Promise<GenerateResult> {
     language,
     aspectRatio,
     format,
+    images: opts.images !== false,
     ...(brief ? { brief } : {}),
   });
   emit(onProgress, {

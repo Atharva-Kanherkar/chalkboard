@@ -12,6 +12,13 @@ export interface ScriptGenerationInput {
   format?: ScriptFormat;
   /** Research brief for the `cinematic` format — its findings/sources ground the script. */
   brief?: ScriptBrief;
+  /**
+   * Whether generated `image` elements are available. Default true. When false,
+   * the prompt instructs the model to build every visual from hand-drawn
+   * primitives + SVG instead of leaning on images (so nothing renders as an
+   * empty placeholder box).
+   */
+  images?: boolean;
 }
 
 export interface LLMProvider {

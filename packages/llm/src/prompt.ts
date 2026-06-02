@@ -96,17 +96,35 @@ Pastel palette (use these for fills): "#a5d8ff" blue, "#ffec99" yellow, "#b2f2bb
 - text: { x, y, text, fontSize?, fontFamily?, maxWidth?, containerId?, textAlign?, verticalAlign? }
   fontFamily: 1 (hand-drawn Virgil — default), 2 (sans-serif Helvetica), 3 (monospace)
 
-### Image (USE THIS for real-world / visual topics!)
-- image: { x, y, width, height, prompt: "<what to depict>" }
-  Chalkboard generates the image from your prompt and draws it (cover-fit, rounded corners) into the box. Use this whenever real imagery beats hand-drawn shapes: astronomy (stars, galaxies, planets), biology (cells, organs), geography, historical scenes, products, animals, anything photographic or richly illustrated. A box of width 520–760 sits nicely beside explanatory text. Write a vivid, specific prompt (subject + style), e.g. "a glowing spiral galaxy with reddened ageing stars on a dark background".
-  Lean on images for visual/science explainers — don't render "how the universe ages" as empty rectangles when an image of stars and galaxies tells the story.
+### Choosing your visual: diagram-first
+DEFAULT TO DRAWING. A clear labeled diagram (shapes + arrows + text, or a custom
+SVG) usually teaches better than a photo — and it's free and instant. An LLM
+explaining the Circle of Willis, the water cycle, a cell, or a heart should
+*draw* it: organic shapes are easy as inline svg paths, and labels/arrows make
+the parts legible. Reach for a generated 'image' element ONLY when real photographic
+realism genuinely adds understanding the drawing can't (a real galaxy, a
+historical photo, a specific animal or place, rich texture). Images cost an API
+call and take time; a diagram is $0 and renders instantly — so when a drawing
+would explain it as well or better, draw it.
 
-### SVG / icons (cheap, crisp vector art — no API cost)
+### SVG / vector art (cheap, crisp, no API cost — your main tool for visuals)
 - svg: { x, y, width, height, motif?: "<name>", svg?: "<inline svg>", color? }
-  Two ways to use it:
-  1. motif — drop in a built-in icon by name. Available: "star", "bolt", "heart", "check", "cross", "sun", "cloud", "gear", "lightbulb", "database", "arrow-right". Optional "color" (hex). Great for status ticks, accents, simple concept icons.
-  2. svg — provide your own inline "<svg>…</svg>" markup for a custom diagram/icon. The renderer draws it crisp, contained (never cropped) in the box.
-  Use svg for clean iconography and small custom vector drawings; use the image element (above) for photographic/illustrative content. SVG/motifs cost nothing — reach for them freely to make scenes less bare.
+  1. motif — a built-in icon by name. Available: "star", "bolt", "heart",
+     "check", "cross", "sun", "cloud", "gear", "lightbulb", "database",
+     "arrow-right", plus science/anatomy motifs: "brain", "heart-anatomy",
+     "lungs", "dna", "cell", "neuron", "atom", "molecule", "droplet", "flask",
+     "leaf", "eye", "globe". Optional "color" (hex). Great for accents and
+     concept icons.
+  2. svg — provide your own inline "<svg viewBox='0 0 W H'>…</svg>" markup for a
+     custom diagram. The renderer draws it crisp and contained. PREFER THIS for
+     anatomy/biology/science figures: build organic shapes from filled <path>s
+     with flat colors and a dark outline (stroke "#1a1a1a", stroke-width ~5,
+     stroke-linejoin/linecap "round"), e.g. arteries as rounded tubes, a vessel
+     ring as a thick stroked polygon with node circles, an organ as a filled
+     path. Put LABELS as separate chalkboard 'text' elements (handwriting font)
+     and connectors as 'arrow' elements — not inside the SVG.
+  SVG/motifs cost nothing — reach for them freely instead of leaving scenes bare
+  or defaulting to a generated image.
 
 ### Code (use this for programming videos!)
 - code-block: { x, y, width, height?, text, fontSize?, backgroundColor? }
@@ -234,10 +252,21 @@ high-contrast). No busy diagrams; let the image carry the scene.
 OUTPUT. Set meta.format = "cinematic" and version = "2".`;
 
 /** System prompt for the requested format. */
-export function systemPromptFor(format?: ScriptFormat): string {
-  if (format === 'short') return SYSTEM_PROMPT + SHORT_FORM_ADDENDUM;
-  if (format === 'cinematic') return SYSTEM_PROMPT + CINEMATIC_ADDENDUM;
-  return SYSTEM_PROMPT;
+// Appended when generated images are unavailable (e.g. --no-images): forbid
+// image elements outright so nothing renders as an empty placeholder box.
+const NO_IMAGES_ADDENDUM = `
+
+IMAGE GENERATION IS DISABLED for this video. Do NOT emit any 'image' elements —
+they will not render. Build every visual from hand-drawn primitives (rectangle,
+ellipse, diamond, line, arrow, text) and 'svg' (named motifs or custom inline
+markup). Lean on custom inline SVG for anatomy/science figures.`;
+
+export function systemPromptFor(format?: ScriptFormat, opts?: { images?: boolean }): string {
+  let base = SYSTEM_PROMPT;
+  if (format === 'short') base = SYSTEM_PROMPT + SHORT_FORM_ADDENDUM;
+  else if (format === 'cinematic') base = SYSTEM_PROMPT + CINEMATIC_ADDENDUM;
+  if (opts?.images === false) base += NO_IMAGES_ADDENDUM;
+  return base;
 }
 
 function formatBrief(brief: ScriptBrief): string {

@@ -37,7 +37,7 @@ export class OpenAIProvider implements LLMProvider {
       model: this.model,
       ...(responseFormat ? { response_format: responseFormat } : {}),
       messages: [
-        { role: 'system', content: systemPromptFor(input.format) },
+        { role: 'system', content: systemPromptFor(input.format, { images: input.images }) },
         { role: 'user', content: userPromptFor(input) },
       ],
     });

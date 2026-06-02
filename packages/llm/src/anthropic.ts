@@ -40,7 +40,7 @@ export class AnthropicProvider implements LLMProvider {
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 8192,
-      system: systemPromptFor(input.format),
+      system: systemPromptFor(input.format, { images: input.images }),
       tools: [
         {
           name: SCENE_SCRIPT_TOOL_NAME,
@@ -66,7 +66,7 @@ export class AnthropicProvider implements LLMProvider {
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 8192,
-      system: systemPromptFor(input.format),
+      system: systemPromptFor(input.format, { images: input.images }),
       messages: [{ role: 'user', content: userPromptFor(input) }],
     });
     const block = response.content[0];

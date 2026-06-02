@@ -31,7 +31,7 @@ export class OllamaProvider implements LLMProvider {
         stream: false,
         format: 'json',
         messages: [
-          { role: 'system', content: systemPromptFor(input.format) },
+          { role: 'system', content: systemPromptFor(input.format, { images: input.images }) },
           { role: 'user', content: userPromptFor(input) },
         ],
       }),

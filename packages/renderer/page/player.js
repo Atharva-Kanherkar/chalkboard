@@ -117,12 +117,43 @@
     database:
       'M12 2c-4.4 0-8 1.3-8 3v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5c0-1.7-3.6-3-8-3zm0 2c3.9 0 6 1.1 6 1s-2.1 1-6 1-6-1.1-6-1 2.1-1 6-1z',
     'arrow-right': 'M4 11h12.2l-5.6-5.6L12 4l8 8-8 8-1.4-1.4 5.6-5.6H4z',
+
+    // --- science / anatomy set ---
+    // Entries starting with '<' are full inner-SVG markup (multi-element); the
+    // rest are single fill paths. `currentColor` follows the motif's `color`.
+    droplet: 'M12 2C12 2 5 11 5 15a7 7 0 0 0 14 0C19 11 12 2 12 2z',
+    atom:
+      '<circle cx="12" cy="12" r="1.9"/><g fill="none" stroke="currentColor" stroke-width="1.2"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
+    dna:
+      '<g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M8 2c0 5 8 5 8 10s-8 5-8 10" stroke-width="1.5"/><path d="M16 2c0 5-8 5-8 10s8 5 8 10" stroke-width="1.5"/><path d="M9.3 5h5.4M8 9h8M8 15h8M9.3 19h5.4" stroke-width="1"/></g>',
+    cell:
+      '<circle cx="12" cy="12" r="9.2" fill="currentColor" opacity="0.18"/><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="13.5" cy="10.5" r="3.4"/>',
+    neuron:
+      '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M11 11L4 7M11 11L4 11M11 11L6.5 16M11 11L8 4"/><path d="M14 13l7 5"/></g><circle cx="12" cy="11.5" r="3.2"/>',
+    molecule:
+      '<g stroke="currentColor" stroke-width="1.5"><path d="M7.4 8.4L12 14.4L16.6 8.4"/></g><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="12" cy="16" r="3.6"/>',
+    leaf:
+      '<path d="M5 19C5 9 12 4 20 4C20 14 13 19 5 19z"/><path d="M6.5 17.5C9.5 13 13 10 17.5 8.2" fill="none" stroke="#fafafa" stroke-width="1.1" stroke-linecap="round"/>',
+    brain:
+      '<path d="M10 4a3 3 0 00-3.2 2.2A2.8 2.8 0 004 9a2.8 2.8 0 00.6 4.4A2.8 2.8 0 007 18a3 3 0 003 2zM14 4a3 3 0 013.2 2.2A2.8 2.8 0 0120 9a2.8 2.8 0 01-.6 4.4A2.8 2.8 0 0117 18a3 3 0 01-3 2z"/>',
+    lungs:
+      '<path d="M11.2 3v6.5M12.8 3v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M11.2 9.5C11.2 9.5 6 10 4.5 15.5S5 21 8 21s3.2-3 3.2-6.5z"/><path d="M12.8 9.5C12.8 9.5 18 10 19.5 15.5S19 21 16 21s-3.2-3-3.2-6.5z"/>',
+    'heart-anatomy':
+      '<path d="M12 21C7 17 3 13 3 8.5A4.5 4.5 0 0112 6A4.5 4.5 0 0121 8.5C21 13 17 17 12 21z"/><g stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"><path d="M10 5.5V2M13.5 5.5V2.5M16.5 7l1.2-2.2"/></g>',
+    eye:
+      '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.2"/>',
+    globe:
+      '<circle cx="12" cy="12" r="9"/><g fill="none" stroke="#fafafa" stroke-width="1"><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3.2 12h17.6M5 7.5h14M5 16.5h14"/></g>',
+    flask:
+      '<path d="M7.2 15h9.6L19 18.2A2 2 0 0117.2 21H6.8A2 2 0 015 18.2z"/><path d="M10 3v6L5.2 18.2A2 2 0 007 21h10a2 2 0 001.8-2.8L14 9V3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 3h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
   };
   function motifSvg(name, color) {
-    const path = MOTIFS[name];
-    if (!path) return null;
+    const m = MOTIFS[name];
+    if (!m) return null;
     const fill = color || '#1e1e1e';
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${fill}"><path d="${path}"/></svg>`;
+    // Full markup (multi-element) vs. a bare path d.
+    const inner = m.trim().startsWith('<') ? m : `<path d="${m}"/>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${fill}" color="${fill}">${inner}</svg>`;
   }
 
   const imageCache = {};
