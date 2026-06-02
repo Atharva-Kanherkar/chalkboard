@@ -2,8 +2,10 @@
 //
 // Reads window.__chalkboard__ injected by the renderer process. Renders each
 // scene's elements onto a single <canvas> using RoughJS for the hand-drawn
-// look. Animates by fading elements in (opacity ramp), staggered, matching the
-// pacing of skillware's draw-animation. Audio is muxed post-hoc.
+// look. Animates by tracing each element on like a pen — RoughJS outline
+// strokes are revealed along their length (setLineDash/lineDashOffset) and
+// fills wash in behind them — staggered element by element. Audio is muxed
+// post-hoc.
 //
 // Signals to the host:
 //   - logs `[chalkboard] READY` once the canvas is ready and the page has had
