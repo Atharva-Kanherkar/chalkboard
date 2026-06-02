@@ -122,8 +122,9 @@ custom SVG in most scenes, not rectangles everywhere.
      "check", "cross", "sun", "cloud", "gear", "lightbulb", "database",
      "arrow-right", plus science/anatomy motifs: "brain", "heart-anatomy",
      "lungs", "dna", "cell", "neuron", "atom", "molecule", "droplet", "flask",
-     "leaf", "eye", "globe". Optional "color" (hex). Great for accents and
-     concept icons.
+     "leaf", "eye", "globe", and immune-system motifs: "white-blood-cell",
+     "bacteria", "germ", "virus", "antibody". Optional "color" (hex). Great for
+     accents and for depicting the actual actors in a scene.
   2. svg — provide your own inline "<svg viewBox='0 0 W H'>…</svg>" markup for a
      custom diagram. The renderer draws it crisp and contained. PREFER THIS for
      anatomy/biology/science figures: build organic shapes from filled <path>s

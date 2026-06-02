@@ -146,6 +146,23 @@
       '<circle cx="12" cy="12" r="9"/><g fill="none" stroke="#fafafa" stroke-width="1"><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3.2 12h17.6M5 7.5h14M5 16.5h14"/></g>',
     flask:
       '<path d="M7.2 15h9.6L19 18.2A2 2 0 0117.2 21H6.8A2 2 0 015 18.2z"/><path d="M10 3v6L5.2 18.2A2 2 0 007 21h10a2 2 0 001.8-2.8L14 9V3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9 3h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+
+    // --- immune system ---
+    // White blood cell: pale cell body with a multi-lobed nucleus (neutrophil).
+    'white-blood-cell':
+      '<circle cx="12" cy="12" r="9.2" fill="currentColor" opacity="0.16"/><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.3"/><g fill="currentColor"><circle cx="9.8" cy="10" r="2.5"/><circle cx="14.2" cy="10.6" r="2.5"/><circle cx="11.6" cy="14" r="2.5"/></g>',
+    // Bacterium: a rod (capsule) with two flagella tails.
+    bacteria:
+      '<g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M19 12.5c2 .3 2-2 4-1.5M5 11.5c-2-.3-2 2-4 1.5"/></g><rect x="5" y="9.2" width="14" height="5.6" rx="2.8"/><g fill="#fafafa"><circle cx="9" cy="12" r="1"/><circle cx="13" cy="12" r="1"/></g>',
+    // Germ / microbe: spiky ball with knobbed spikes (distinct from the sun).
+    germ:
+      '<circle cx="12" cy="12" r="5.4"/><g stroke="currentColor" stroke-width="1.3"><path d="M12 6.6V3M12 17.4V21M6.6 12H3M17.4 12H21M8.1 8.1 5.6 5.6M15.9 15.9l2.5 2.5M15.9 8.1l2.5-2.5M8.1 15.9l-2.5 2.5"/></g><g fill="currentColor"><circle cx="12" cy="2.4" r="1.3"/><circle cx="12" cy="21.6" r="1.3"/><circle cx="2.4" cy="12" r="1.3"/><circle cx="21.6" cy="12" r="1.3"/><circle cx="4.8" cy="4.8" r="1.2"/><circle cx="19.2" cy="19.2" r="1.2"/><circle cx="19.2" cy="4.8" r="1.2"/><circle cx="4.8" cy="19.2" r="1.2"/></g>',
+    // Alias: a virus reads like the knobbed germ (the old sun-like one was pruned).
+    virus:
+      '<circle cx="12" cy="12" r="5.4"/><g stroke="currentColor" stroke-width="1.3"><path d="M12 6.6V3M12 17.4V21M6.6 12H3M17.4 12H21M8.1 8.1 5.6 5.6M15.9 15.9l2.5 2.5M15.9 8.1l2.5-2.5M8.1 15.9l-2.5 2.5"/></g><g fill="currentColor"><circle cx="12" cy="2.4" r="1.3"/><circle cx="12" cy="21.6" r="1.3"/><circle cx="2.4" cy="12" r="1.3"/><circle cx="21.6" cy="12" r="1.3"/><circle cx="4.8" cy="4.8" r="1.2"/><circle cx="19.2" cy="19.2" r="1.2"/><circle cx="19.2" cy="4.8" r="1.2"/><circle cx="4.8" cy="19.2" r="1.2"/></g>',
+    // Antibody: the classic Y.
+    antibody:
+      '<path d="M12 21V12M12 12 6.5 4.5M12 12l5.5-7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 3.2 8 5.4M19 3.2 16 5.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
   };
   function motifSvg(name, color) {
     const m = MOTIFS[name];
