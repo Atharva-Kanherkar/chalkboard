@@ -1,9 +1,10 @@
 # feat-handdrawn-stroke-draw — Test Contract
 
-Goal: diagrams should look **drawn in real time** — strokes progressively traced
-onto the board like a "draw my life" video — instead of the current opacity
-fade-in. A little faster than today. Core change is in
-`packages/renderer/page/player.js`; pacing knob in `packages/renderer/src/timing.ts`.
+Goal: **opt-in** hand-drawn animation. When a user asks for it (`--draw` →
+`meta.animation: 'draw'`), diagrams are **drawn in real time** — strokes
+progressively traced onto the board like a "draw my life" video. Without it, the
+**default stays the classic opacity fade-in**, unchanged from before. Core change
+is in `packages/renderer/page/player.js`; the switch is plumbed CLI → core → meta.
 
 ## Functional Behavior
 
@@ -29,8 +30,11 @@ fade-in. A little faster than today. Core change is in
    drawn last** (after the shaft reaches the tip, p ≳ 0.85), not concurrently.
 8. **Images / SVG / highlight.** `image` and `svg` keep the opacity fade (cannot be
    stroke-drawn); `highlight` stays a marker band (alpha ramps with p). Unchanged feel.
-9. **Speed.** `DEFAULT_DRAW_MS` reduced `540 → 420` (steady, uniform per shape).
-   Stagger / audio-sync budget in `timing.ts` otherwise unchanged.
+9. **Opt-in switch.** `--draw` (CLI) → `GenerateOptions.animation` → core sets
+   `script.meta.animation = 'draw'`; the player reads it. Default (omitted) ==
+   `'fade'` == today's behavior, byte-identical. `timing.ts` unchanged
+   (`DEFAULT_DRAW_MS` stays 540); draw mode finishes tracing at ~0.8 of the
+   window so it feels livelier without changing scene length / narration sync.
 10. **Final-state parity.** `paintSceneFinal` (snapshot mode → vision self-correct)
     and the scene tail-hold render the fully-revealed state (p=1): strokes fully
     drawn, fills full alpha, text fully shown — visually identical end-state to
@@ -45,8 +49,7 @@ Playwright) so it has no existing unit harness. The pure geometry helper is the 
 piece worth isolating conceptually, but extracting it to a tested module is out of
 scope for this PR. Covered instead by the spike + visual review below.
 
-- `packages/renderer/src/timing.test.ts` — existing tests must still pass with
-  `DEFAULT_DRAW_MS = 420` (any test asserting the old 540 default is updated to 420).
+- `packages/renderer/src/timing.test.ts` — unchanged; `DEFAULT_DRAW_MS` stays 540.
 
 ## Integration / Functional Tests
 
@@ -56,9 +59,13 @@ scope for this PR. Covered instead by the spike + visual review below.
 
 ## Smoke Tests
 
-- **Visual spike (the key gate).** A Playwright harness loads `page/index.html` with
-  a synthetic one-scene script holding a hachure rectangle, a solid ellipse, an
-  arrow-with-label, and multi-line text, then captures PNGs across progress (rect at
+- **Default-fade parity.** With no `--draw` (animation omitted), a smoke render
+  must show elements **fading in whole** (classic look), not tracing — confirmed by
+  pulling a mid-window frame from the real mp4.
+- **Visual spike (the key gate).** A Playwright harness (scene tagged
+  `animation: 'draw'`) loads `page/index.html` with a synthetic one-scene script
+  holding a hachure rectangle, a solid ellipse, an arrow-with-label, and multi-line
+  text, then captures PNGs across progress (rect at
   0.35/0.7, arrow at 0.5/0.95, text at 0.4/0.8, plus the final frame). The
   `svg`/`image`/`highlight` reveal paths just keep the old fade and are not separately
   exercised here (lowest-risk, unchanged behavior). Assertions (by eye, screenshots

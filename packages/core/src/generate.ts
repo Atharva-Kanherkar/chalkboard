@@ -278,6 +278,10 @@ async function renderFinalizedScript(
     if (translated) captionTexts = translated;
   }
 
+  // Animation style is a render directive (not LLM content): set it on the meta
+  // right before render so the player picks the reveal mode. Opt-in; default fade.
+  if (opts.animation) script.meta.animation = opts.animation;
+
   emit(onProgress, { phase: 'render', message: 'rendering silent video' });
   const rendered = await renderScript({
     script,
