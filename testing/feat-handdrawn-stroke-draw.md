@@ -57,18 +57,18 @@ scope for this PR. Covered instead by the spike + visual review below.
 ## Smoke Tests
 
 - **Visual spike (the key gate).** A Playwright harness loads `page/index.html` with
-  a synthetic one-scene script (hachure rectangle + solid ellipse + arrow-with-label
-  + multi-line text) and captures PNGs across progress (rect 0.35/0.7, arrow 0.5/0.95,
-  text 0.4/0.8, and final). The `svg`/`image`/`highlight` reveal paths just keep the
-  old fade and are not separately exercised here (lowest-risk, unchanged behavior).
-  Assertions (by eye, screenshots read in-session):
-  - p=0.35 / 0.7: shapes are **partially drawn** (strokes mid-reveal), not just dim.
-  - No double-drawn/re-traced outline visible.
-  - Text shows only the left portion of each line at mid-progress.
-  - Arrowhead absent until the shaft is nearly complete.
-  - p=1.0 frame is visually equivalent to today's final frame (parity).
+  a synthetic one-scene script holding a hachure rectangle, a solid ellipse, an
+  arrow-with-label, and multi-line text, then captures PNGs across progress (rect at
+  0.35/0.7, arrow at 0.5/0.95, text at 0.4/0.8, plus the final frame). The
+  `svg`/`image`/`highlight` reveal paths just keep the old fade and are not separately
+  exercised here (lowest-risk, unchanged behavior). Assertions (by eye, screenshots
+  read in-session): shapes are partially drawn mid-progress (not just dim); no
+  double-drawn/re-traced outline; text shows only the left portion of each line
+  mid-progress; the arrowhead is absent until the shaft is nearly complete; and the
+  final frame is visually equivalent to today's.
 - Existing renderer smoke (`packages/renderer/scripts/smoke.ts`) still produces a
-  playable mp4.
+  playable mp4 — frames pulled from the real mp4 show the title writing on, the
+  rectangle tracing edge-by-edge then filling, and the arrow shaft drawing.
 
 ## E2E Tests
 
