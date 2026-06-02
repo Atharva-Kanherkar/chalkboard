@@ -844,10 +844,12 @@
     const o = drawable.options || {};
     const e = clamp01(p);
 
-    // Fills first, under the outline.
-    if (e > 0) {
+    // Fills first, under the outline — but they lag the outline so the pen
+    // appears to draw the border first, then wash the fill in behind it.
+    const fillP = clamp01((e - 0.4) / 0.6);
+    if (fillP > 0) {
       ctx.save();
-      ctx.globalAlpha = base * fillEase(e);
+      ctx.globalAlpha = base * fillEase(fillP);
       for (const set of drawable.sets || []) {
         if (set.type === 'fillPath') {
           ctx.fillStyle = o.fill || '#000000';
@@ -1482,6 +1484,22 @@
     // Snapshot mode: expose a painter and stop. The host drives screenshots.
     if (cfg.snapshot) {
       window.chalkboardPaintScene = (i) => paintSceneFinal(i);
+      // Debug hook for the draw-spike harness: paint scene `i` with elements
+      // [0..currentIdx) fully drawn and element `currentIdx` revealed to `p`.
+      window.chalkboardPaintProgress = (i, currentIdx, p) => {
+        const scene = cfg.script.scenes[i];
+        if (!scene) {
+          paintBg();
+          return false;
+        }
+        let elements = Array.isArray(scene.elements) ? scene.elements : [];
+        if (!hasRenderableContent(elements)) elements = synthesizeNarrationFallback(scene);
+        const byId = {};
+        for (const el of elements) if (el && el.id) byId[el.id] = el;
+        captionCues = [];
+        paintScene(elements, currentIdx, p, byId);
+        return true;
+      };
       paintBg();
       await sleep(100);
       console.log('[chalkboard] READY');
