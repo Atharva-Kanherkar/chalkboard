@@ -57,8 +57,10 @@ scope for this PR. Covered instead by the spike + visual review below.
 ## Smoke Tests
 
 - **Visual spike (the key gate).** A Playwright harness loads `page/index.html` with
-  a synthetic one-scene script (rectangle + ellipse + arrow-with-label + multi-line
-  text + an svg motif) and captures PNGs at progress p ≈ 0.0, 0.35, 0.7, 1.0.
+  a synthetic one-scene script (hachure rectangle + solid ellipse + arrow-with-label
+  + multi-line text) and captures PNGs across progress (rect 0.35/0.7, arrow 0.5/0.95,
+  text 0.4/0.8, and final). The `svg`/`image`/`highlight` reveal paths just keep the
+  old fade and are not separately exercised here (lowest-risk, unchanged behavior).
   Assertions (by eye, screenshots read in-session):
   - p=0.35 / 0.7: shapes are **partially drawn** (strokes mid-reveal), not just dim.
   - No double-drawn/re-traced outline visible.
