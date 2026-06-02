@@ -21,7 +21,9 @@ export interface AudioInfo {
 }
 
 const MIN_SCENE_MS = 1500;
-const DEFAULT_DRAW_MS = 540;
+// Per-element draw window. The player traces each element on like a pen over
+// this span; a touch faster than a passive fade so the board feels alive.
+const DEFAULT_DRAW_MS = 420;
 const DEFAULT_HOLD_MS = 600;
 
 export function planSceneTiming(scene: Scene, audio: AudioInfo | undefined): SceneTiming {

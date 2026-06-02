@@ -22,7 +22,7 @@ describe('planSceneTiming', () => {
   });
 
   it('distributes reveal time across gaps', () => {
-    // 4 elements, 4s audio. revealWindow ≈ 4000 - 600 - 540 = 2860 over 3 gaps → ~953ms
+    // 4 elements, 4s audio. revealWindow ≈ 4000 - 600 - 420 = 2980 over 3 gaps → ~993ms
     const t = planSceneTiming(scene(4), { durationMs: 4000 });
     expect(t.staggerMs).toBeGreaterThan(500);
     expect(t.staggerMs).toBeLessThan(1500);
