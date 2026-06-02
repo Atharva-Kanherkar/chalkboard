@@ -122,26 +122,21 @@
     // Entries starting with '<' are full inner-SVG markup (multi-element); the
     // rest are single fill paths. `currentColor` follows the motif's `color`.
     droplet: 'M12 2C12 2 5 11 5 15a7 7 0 0 0 14 0C19 11 12 2 12 2z',
-    atom:
-      '<circle cx="12" cy="12" r="1.9"/><g fill="none" stroke="currentColor" stroke-width="1.2"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
-    dna:
-      '<g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M8 2c0 5 8 5 8 10s-8 5-8 10" stroke-width="1.5"/><path d="M16 2c0 5-8 5-8 10s8 5 8 10" stroke-width="1.5"/><path d="M9.3 5h5.4M8 9h8M8 15h8M9.3 19h5.4" stroke-width="1"/></g>',
-    cell:
-      '<circle cx="12" cy="12" r="9.2" fill="currentColor" opacity="0.18"/><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="13.5" cy="10.5" r="3.4"/>',
+    atom: '<circle cx="12" cy="12" r="1.9"/><g fill="none" stroke="currentColor" stroke-width="1.2"><ellipse cx="12" cy="12" rx="10" ry="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="10" ry="4.2" transform="rotate(120 12 12)"/></g>',
+    dna: '<g fill="none" stroke="currentColor" stroke-linecap="round"><path d="M8 2c0 5 8 5 8 10s-8 5-8 10" stroke-width="1.5"/><path d="M16 2c0 5-8 5-8 10s8 5 8 10" stroke-width="1.5"/><path d="M9.3 5h5.4M8 9h8M8 15h8M9.3 19h5.4" stroke-width="1"/></g>',
+    cell: '<circle cx="12" cy="12" r="9.2" fill="currentColor" opacity="0.18"/><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="13.5" cy="10.5" r="3.4"/>',
     neuron:
       '<g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M11 11L4 7M11 11L4 11M11 11L6.5 16M11 11L8 4"/><path d="M14 13l7 5"/></g><circle cx="12" cy="11.5" r="3.2"/>',
     molecule:
       '<g stroke="currentColor" stroke-width="1.5"><path d="M7.4 8.4L12 14.4L16.6 8.4"/></g><circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="12" cy="16" r="3.6"/>',
-    leaf:
-      '<path d="M5 19C5 9 12 4 20 4C20 14 13 19 5 19z"/><path d="M6.5 17.5C9.5 13 13 10 17.5 8.2" fill="none" stroke="#fafafa" stroke-width="1.1" stroke-linecap="round"/>',
+    leaf: '<path d="M5 19C5 9 12 4 20 4C20 14 13 19 5 19z"/><path d="M6.5 17.5C9.5 13 13 10 17.5 8.2" fill="none" stroke="#fafafa" stroke-width="1.1" stroke-linecap="round"/>',
     brain:
       '<path d="M10 4a3 3 0 00-3.2 2.2A2.8 2.8 0 004 9a2.8 2.8 0 00.6 4.4A2.8 2.8 0 007 18a3 3 0 003 2zM14 4a3 3 0 013.2 2.2A2.8 2.8 0 0120 9a2.8 2.8 0 01-.6 4.4A2.8 2.8 0 0117 18a3 3 0 01-3 2z"/>',
     lungs:
       '<path d="M11.2 3v6.5M12.8 3v6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M11.2 9.5C11.2 9.5 6 10 4.5 15.5S5 21 8 21s3.2-3 3.2-6.5z"/><path d="M12.8 9.5C12.8 9.5 18 10 19.5 15.5S19 21 16 21s-3.2-3-3.2-6.5z"/>',
     'heart-anatomy':
       '<path d="M12 21C7 17 3 13 3 8.5A4.5 4.5 0 0112 6A4.5 4.5 0 0121 8.5C21 13 17 17 12 21z"/><g stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"><path d="M10 5.5V2M13.5 5.5V2.5M16.5 7l1.2-2.2"/></g>',
-    eye:
-      '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.2"/>',
+    eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="12" r="3.2"/>',
     globe:
       '<circle cx="12" cy="12" r="9"/><g fill="none" stroke="#fafafa" stroke-width="1"><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3.2 12h17.6M5 7.5h14M5 16.5h14"/></g>',
     flask:
@@ -155,8 +150,7 @@
     bacteria:
       '<g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M19 12.5c2 .3 2-2 4-1.5M5 11.5c-2-.3-2 2-4 1.5"/></g><rect x="5" y="9.2" width="14" height="5.6" rx="2.8"/><g fill="#fafafa"><circle cx="9" cy="12" r="1"/><circle cx="13" cy="12" r="1"/></g>',
     // Germ / microbe: spiky ball with knobbed spikes (distinct from the sun).
-    germ:
-      '<circle cx="12" cy="12" r="5.4"/><g stroke="currentColor" stroke-width="1.3"><path d="M12 6.6V3M12 17.4V21M6.6 12H3M17.4 12H21M8.1 8.1 5.6 5.6M15.9 15.9l2.5 2.5M15.9 8.1l2.5-2.5M8.1 15.9l-2.5 2.5"/></g><g fill="currentColor"><circle cx="12" cy="2.4" r="1.3"/><circle cx="12" cy="21.6" r="1.3"/><circle cx="2.4" cy="12" r="1.3"/><circle cx="21.6" cy="12" r="1.3"/><circle cx="4.8" cy="4.8" r="1.2"/><circle cx="19.2" cy="19.2" r="1.2"/><circle cx="19.2" cy="4.8" r="1.2"/><circle cx="4.8" cy="19.2" r="1.2"/></g>',
+    germ: '<circle cx="12" cy="12" r="5.4"/><g stroke="currentColor" stroke-width="1.3"><path d="M12 6.6V3M12 17.4V21M6.6 12H3M17.4 12H21M8.1 8.1 5.6 5.6M15.9 15.9l2.5 2.5M15.9 8.1l2.5-2.5M8.1 15.9l-2.5 2.5"/></g><g fill="currentColor"><circle cx="12" cy="2.4" r="1.3"/><circle cx="12" cy="21.6" r="1.3"/><circle cx="2.4" cy="12" r="1.3"/><circle cx="21.6" cy="12" r="1.3"/><circle cx="4.8" cy="4.8" r="1.2"/><circle cx="19.2" cy="19.2" r="1.2"/><circle cx="19.2" cy="4.8" r="1.2"/><circle cx="4.8" cy="19.2" r="1.2"/></g>',
     // Alias: a virus reads like the knobbed germ (the old sun-like one was pruned).
     virus:
       '<circle cx="12" cy="12" r="5.4"/><g stroke="currentColor" stroke-width="1.3"><path d="M12 6.6V3M12 17.4V21M6.6 12H3M17.4 12H21M8.1 8.1 5.6 5.6M15.9 15.9l2.5 2.5M15.9 8.1l2.5-2.5M8.1 15.9l-2.5 2.5"/></g><g fill="currentColor"><circle cx="12" cy="2.4" r="1.3"/><circle cx="12" cy="21.6" r="1.3"/><circle cx="2.4" cy="12" r="1.3"/><circle cx="21.6" cy="12" r="1.3"/><circle cx="4.8" cy="4.8" r="1.2"/><circle cx="19.2" cy="19.2" r="1.2"/><circle cx="19.2" cy="4.8" r="1.2"/><circle cx="4.8" cy="19.2" r="1.2"/></g>',
