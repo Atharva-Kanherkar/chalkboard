@@ -20,6 +20,11 @@ export interface GenerateOptions {
    * renders full-frame imagery with Ken Burns motion). Default 'explainer'.
    */
   format?: 'explainer' | 'short' | 'cinematic';
+  /**
+   * Element animation style. 'fade' (default) eases elements in; 'draw' traces
+   * them on like a hand-drawn pen. Opt-in — omit for the classic fade.
+   */
+  animation?: 'fade' | 'draw';
   /** Research provider for `cinematic`. Default: auto (deep-research if key, else basic). */
   research?: 'openai-deep-research' | 'basic' | 'stub';
   /** Research depth for `cinematic`: 'quick' | 'standard' | 'deep'. */

@@ -22,7 +22,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const SCRIPT: SceneScript = {
   version: '1',
-  meta: { language: 'en', aspectRatio: '16:9', title: 'Draw spike' },
+  meta: { language: 'en', aspectRatio: '16:9', title: 'Draw spike', animation: 'draw' },
   scenes: [
     {
       id: 'spike',

@@ -2,9 +2,10 @@
 //
 // Reads window.__chalkboard__ injected by the renderer process. Renders each
 // scene's elements onto a single <canvas> using RoughJS for the hand-drawn
-// look. Animates by tracing each element on like a pen — RoughJS outline
-// strokes are revealed along their length (setLineDash/lineDashOffset) and
-// fills wash in behind them — staggered element by element. Audio is muxed
+// look. Animates element by element: by default each one fades in (opacity
+// ramp); when meta.animation === 'draw' (opt-in) each one is traced on like a
+// pen — RoughJS outline strokes revealed along their length
+// (setLineDash/lineDashOffset) with fills washing in behind. Audio is muxed
 // post-hoc.
 //
 // Signals to the host:
@@ -1244,6 +1245,15 @@
    * canvas at full opacity, then blitting with globalAlpha for the current
    * element.
    */
+  // Animation style: 'draw' traces strokes on like a pen; anything else (the
+  // default) fades each element in by opacity — the classic chalkboard look.
+  // Opt-in via meta.animation === 'draw' (CLI --draw).
+  const ANIM_MODE = (cfg.script && cfg.script.meta && cfg.script.meta.animation) || 'fade';
+  // In draw mode, finish tracing a touch before the element's window ends so the
+  // motion feels lively; the leftover is a brief settle. Window length is
+  // unchanged, so narration sync is identical to fade mode.
+  const DRAW_COMPRESS = 0.8;
+
   function paintScene(elements, currentIdx, currentProgress, byId) {
     paintBg();
     const rc = rcFor();
@@ -1254,10 +1264,16 @@
         ctx.globalAlpha = 1;
         drawElement(rc, el, byId);
       } else if (j === currentIdx) {
-        // The one element being drawn right now: trace it on like a pen.
-        ctx.globalAlpha = 1;
-        drawElementRevealed(el, byId, currentProgress);
-        ctx.globalAlpha = 1;
+        if (ANIM_MODE === 'draw') {
+          // The one element being drawn right now: trace it on like a pen.
+          ctx.globalAlpha = 1;
+          drawElementRevealed(el, byId, Math.min(1, currentProgress / DRAW_COMPRESS));
+          ctx.globalAlpha = 1;
+        } else {
+          // Default: fade the element in by opacity (classic behavior).
+          ctx.globalAlpha = easeOutCubicSafe(currentProgress);
+          drawElement(rc, el, byId);
+        }
       }
       // j > currentIdx: invisible — skip entirely.
     }

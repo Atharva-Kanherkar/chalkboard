@@ -104,6 +104,12 @@ export interface SceneScriptMeta {
   mood?: MusicMood;
   /** Output style. 'cinematic' = research-backed full-frame documentary. */
   format?: 'explainer' | 'short' | 'cinematic';
+  /**
+   * How elements appear on the board. 'fade' (default) eases each element in by
+   * opacity; 'draw' traces each one on like a pen (RoughJS strokes revealed
+   * along their length). Opt-in — undefined behaves as 'fade'.
+   */
+  animation?: 'fade' | 'draw';
   /** Named voice roles → provider voice ids (e.g. { narrator: "...", quote: "..." }). */
   voices?: Record<string, string>;
 }
